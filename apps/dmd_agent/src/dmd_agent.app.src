@@ -1,0 +1,19 @@
+{application, dmd_agent,
+ [{description, "Device (router) agent fleet simulator"},
+  {vsn, "0.1.0"},
+  {registered, [dmd_agent_sup, device_sup]},
+  {mod, {dmd_agent_app, []}},
+  {applications, [kernel, stdlib, ssl, dmd_common]},
+  {env, [
+    {csv_file, "config/devices.csv"},
+    {mgmt_host, {127,0,0,1}},
+    {mgmt_port, 5000},
+    {reboot_duration_ms, 5000},
+    {log_file, "log/agent.log"},
+    {tls, false},
+    {tls_opts, []}
+  ]},
+  {modules, []},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

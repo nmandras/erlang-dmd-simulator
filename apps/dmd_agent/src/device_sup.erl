@@ -2,13 +2,13 @@
 %%%
 %%% Each child is a per-device subtree ({@link device_instance_sup}). A public
 %%% ETS table maps IMEI -> instance-supervisor pid so devices can be stopped
-%%% (and counted) by IMEI.
+%%% by IMEI.
 -module(device_sup).
 -behaviour(supervisor).
 
--export([start_link/0, init/1, start_device/3, stop_device/1, count/0]).
+-export([start_link/0, init/1, start_device/4, stop_device/1, count/0]).
 
--define(TAB, dmd_devices).
+-define(TAB, dmd_agent_devices).
 
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
@@ -25,14 +25,14 @@ init([]) ->
               type => supervisor},
     {ok, {SupFlags, [Child]}}.
 
--spec start_device(binary(), inet:ip_address(), inet:port_number()) ->
-          {ok, pid()} | {error, term()}.
-start_device(IMEI, IP, Port) ->
+-spec start_device(binary(), inet:ip_address(), inet:port_number(),
+                   non_neg_integer()) -> {ok, pid()} | {error, term()}.
+start_device(IMEI, IP, Port, PeriodMs) ->
     case ets:member(?TAB, IMEI) of
         true ->
             {error, already_started};
         false ->
-            case supervisor:start_child(?MODULE, [IMEI, IP, Port]) of
+            case supervisor:start_child(?MODULE, [IMEI, IP, Port, PeriodMs]) of
                 {ok, Pid} ->
                     ets:insert(?TAB, {IMEI, Pid}),
                     {ok, Pid};
@@ -47,7 +47,6 @@ stop_device(IMEI) ->
         [{_, Pid}] ->
             Result = supervisor:terminate_child(?MODULE, Pid),
             ets:delete(?TAB, IMEI),
-            mgmt_registry:unregister(IMEI),
             Result;
         [] ->
             {error, not_found}

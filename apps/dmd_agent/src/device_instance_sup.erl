@@ -5,19 +5,19 @@
 -module(device_instance_sup).
 -behaviour(supervisor).
 
--export([start_link/3, init/1, agent_pid/1]).
+-export([start_link/4, init/1, agent_pid/1]).
 
-start_link(IMEI, IP, Port) ->
-    supervisor:start_link(?MODULE, [IMEI, IP, Port]).
+start_link(IMEI, IP, Port, PeriodMs) ->
+    supervisor:start_link(?MODULE, [IMEI, IP, Port, PeriodMs]).
 
-init([IMEI, IP, Port]) ->
+init([IMEI, IP, Port, PeriodMs]) ->
     SupFlags = #{strategy => one_for_all, intensity => 5, period => 10},
     Children = [
-        %% Agent first so it is registered before the listener serves commands.
+        %% Agent first so it is up before the listener serves commands.
         #{id => agent,
-          start => {device_agent, start_link, [IMEI, IP, Port]}},
+          start => {device_agent, start_link, [IMEI, IP, Port, PeriodMs]}},
         #{id => listener,
-          start => {device_listener, start_link, [self(), Port, IP]}}
+          start => {device_listener, start_link, [self(), IMEI, IP, Port]}}
     ],
     {ok, {SupFlags, Children}}.
 

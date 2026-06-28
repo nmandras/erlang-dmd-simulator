@@ -5,3 +5,4 @@ rebar.lock
 erl_crash.dump
 /priv/certs/*.pem
 /priv/certs/*.key
+/log/*.log

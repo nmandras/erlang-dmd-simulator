@@ -4,9 +4,9 @@
 %%% — the first two bytes give the payload length, least-significant byte first.
 %%%
 %%% Requests (payload):
-%%%   `CALL: <15-digit-IMEI>,<ip>'   device -> server, periodic status
-%%%   `STAT'                          server -> device, ask for status
-%%%   `REBOOT'                        server -> device, reboot
+%%%   `CALL: <15-digit-IMEI>,<ip>'   agent -> server, periodic status
+%%%   `STAT'                          server -> agent, ask for status
+%%%   `REBOOT'                        server -> agent, reboot
 %%%
 %%% Responses (payload): every request is answered by the peer with the
 %%% command name, a result code (`0' success, `1' failure) and optional data:
@@ -21,7 +21,6 @@
 -define(LEN_BYTES, 2).
 -define(MAX_PAYLOAD, 65535).
 
--define(OK, 0).
 -define(FAIL, 1).
 
 %%====================================================================

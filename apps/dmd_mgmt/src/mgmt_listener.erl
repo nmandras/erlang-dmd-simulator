@@ -1,8 +1,8 @@
 %%% @doc Management server CALL-ingestion listener.
 %%%
-%%% Owns the listening socket and a linked acceptor process. Each accepted
-%%% connection is handled by a short-lived process: read one framed CALL,
-%%% update the registry, reply `CALL:0' (or `ERR:1' on a bad request), close.
+%%% Owns the listening socket and a linked acceptor. Each accepted connection
+%%% reads one framed CALL, logs it (timestamped), refreshes the registry and
+%%% replies `CALL:0' (or `ERR:1' on a bad request).
 -module(mgmt_listener).
 -behaviour(gen_server).
 
@@ -10,15 +10,17 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 
 -define(RECV_TIMEOUT, 5000).
+-define(DOMAIN, #{domain => [dmd, mgmt]}).
 
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init([]) ->
     process_flag(trap_exit, true),
-    Port = dmd_config:mgmt_port(),
-    ExtraOpts = [{ip, dmd_config:mgmt_host()}],
-    {ok, LSock} = dmd_transport:listen(Port, ExtraOpts, dmd_config:tls_enabled()),
+    Port = dmd_config:mgmt_port(dmd_mgmt),
+    ExtraOpts = [{ip, dmd_config:mgmt_host(dmd_mgmt)}],
+    {ok, LSock} = dmd_transport:listen(Port, ExtraOpts, dmd_config:listen_tls(dmd_mgmt)),
+    logger:info("management server listening on port ~b", [Port], ?DOMAIN),
     Acceptor = spawn_acceptor(LSock),
     {ok, #{lsock => LSock, acceptor => Acceptor}}.
 
@@ -43,8 +45,6 @@ spawn_acceptor(LSock) ->
 accept_loop(LSock) ->
     case dmd_transport:accept(LSock) of
         {ok, Sock} ->
-            %% Hand the socket to a fresh process and only let it run once it
-            %% actually owns the socket (recv requires the controlling process).
             Pid = spawn(fun() -> receive go -> handle_conn(Sock) end end),
             case dmd_transport:controlling_process(Sock, Pid) of
                 ok -> Pid ! go;
@@ -62,9 +62,11 @@ handle_conn(Sock) ->
         {ok, Payload} ->
             Resp = case dmd_proto:decode_request(Payload) of
                        {call, IMEI, IP} ->
+                           logger:info("CALL recv imei=~s ip=~s", [IMEI, IP], ?DOMAIN),
                            mgmt_registry:touch(IMEI, IP, online),
                            dmd_proto:encode_response(call, 0);
                        _ ->
+                           logger:warning("bad request: ~p", [Payload], ?DOMAIN),
                            dmd_proto:encode_response(<<"ERR">>, 1)
                    end,
             _ = dmd_proto:write_msg(Sock, Resp);

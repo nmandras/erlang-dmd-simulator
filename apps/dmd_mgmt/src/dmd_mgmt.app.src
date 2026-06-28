@@ -1,0 +1,21 @@
+{application, dmd_mgmt,
+ [{description, "Mock management server: CALL ingestion, command driver"},
+  {vsn, "0.1.0"},
+  {registered, [dmd_mgmt_sup, mgmt_registry, mgmt_listener, mgmt_commander, mgmt_driver]},
+  {mod, {dmd_mgmt_app, []}},
+  {applications, [kernel, stdlib, ssl, dmd_common]},
+  {env, [
+    {csv_file, "config/devices.csv"},
+    {mgmt_host, {127,0,0,1}},
+    {mgmt_port, 5000},
+    {log_file, "log/mgmt.log"},
+    {driver_enabled, true},
+    {driver_min_ms, 3000},
+    {driver_max_ms, 8000},
+    {tls, false},
+    {tls_opts, []}
+  ]},
+  {modules, []},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

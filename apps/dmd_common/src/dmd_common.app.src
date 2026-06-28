@@ -1,0 +1,10 @@
+{application, dmd_common,
+ [{description, "Shared library: wire protocol, transport, config, CSV, logging"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [kernel, stdlib, ssl]},
+  {env, []},
+  {modules, []},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.

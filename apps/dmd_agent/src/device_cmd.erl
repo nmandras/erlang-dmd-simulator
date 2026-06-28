@@ -2,12 +2,11 @@
 %%%
 %%% Single extension point for everything a device can be asked to do. STAT and
 %%% REBOOT are fully implemented; security-log retrieval, configuration apply
-%%% and firmware upgrade are stubbed but wired in, so adding real behaviour is
-%%% a localised change here plus (if needed) the agent state.
+%%% and firmware upgrade are stubbed but wired in.
 %%%
-%%% Returns `{Code, Data, AgentAction}' where Code is 0 (ok) / 1 (fail),
-%%% Data is an optional binary appended to the response, and AgentAction tells
-%%% the agent whether to change state (e.g. begin a reboot).
+%%% Returns `{Code, Data, Action}' where Code is 0 (ok) / 1 (fail), Data is an
+%%% optional binary appended to the response, and Action tells the agent
+%%% whether to change state (e.g. begin a reboot).
 -module(device_cmd).
 
 -export([handle/2]).
@@ -20,7 +19,6 @@
 handle(stat, Data) ->
     {0, device_agent:status_line(Data), none};
 handle(reboot, _Data) ->
-    %% Acknowledge now; the agent performs the state transition.
     {0, <<>>, reboot};
 handle({config, _Payload}, _Data) ->
     {0, <<"config-applied">>, none};

@@ -1,8 +1,7 @@
 %%% @doc Issues server-initiated commands (STAT/REBOOT) to a device.
 %%%
 %%% Looks the device up in the registry, dials its IP:port, writes the command
-%%% and reads the framed `CMD:code[,data]' response. Serialised through a
-%%% gen_server so command sends are easy to observe and rate-limit later.
+%%% and reads the framed `CMD:code[,data]' response.
 -module(mgmt_commander).
 -behaviour(gen_server).
 
@@ -39,7 +38,7 @@ do_send(IMEI, Cmd) ->
     end.
 
 connect_and_send(IP, Port, Cmd) ->
-    case dmd_transport:connect(IP, Port, [], dmd_config:tls_enabled()) of
+    case dmd_transport:connect(IP, Port, [], dmd_config:connect_tls(dmd_mgmt)) of
         {ok, Sock} ->
             Result = exchange(Sock, Cmd),
             dmd_transport:close(Sock),

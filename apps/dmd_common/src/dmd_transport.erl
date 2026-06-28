@@ -1,34 +1,34 @@
 %%% @doc Transport abstraction over `gen_tcp' and `ssl'.
 %%%
-%%% A socket handle is the tagged tuple `{gen_tcp, Sock} | {ssl, Sock}', so
-%%% all callers (listeners, the periodic CALL client, the commander) are
-%%% transport-agnostic. TLS is selected per call via the boolean argument,
-%%% which the rest of the system derives from {@link dmd_config:tls_enabled/0}.
+%%% A socket handle is the tagged tuple `{gen_tcp, Sock} | {ssl, Sock}', so all
+%%% callers are transport-agnostic. The TLS argument is `false' (plain TCP) or
+%%% `{tls, SslOpts}'; callers derive it from {@link dmd_config:listen_tls/1} /
+%%% {@link dmd_config:connect_tls/1}.
 -module(dmd_transport).
 
 -export([listen/3, accept/1, connect/4,
          send/2, recv/3, close/1,
          controlling_process/2, peername/1]).
 
--export_type([socket/0]).
+-export_type([socket/0, tls_arg/0]).
 
 -type socket() :: {gen_tcp, gen_tcp:socket()} | {ssl, ssl:sslsocket()}.
+-type tls_arg() :: false | {tls, [ssl:tls_option()]}.
 
-%% Raw framing: we prepend our own 2-byte little-endian length prefix
-%% (see dmd_proto), so the socket itself must not do any packet framing.
+%% Raw framing: dmd_proto prepends its own 2-byte length prefix, so the socket
+%% itself must not do any packet framing.
 base_opts() ->
     [binary, {packet, raw}, {active, false}, {reuseaddr, true}, {nodelay, true}].
 
--spec listen(inet:port_number(), [gen_tcp:listen_option()], boolean()) ->
+-spec listen(inet:port_number(), [gen_tcp:listen_option()], tls_arg()) ->
           {ok, socket()} | {error, term()}.
 listen(Port, ExtraOpts, false) ->
     case gen_tcp:listen(Port, base_opts() ++ ExtraOpts) of
         {ok, S} -> {ok, {gen_tcp, S}};
         Err -> Err
     end;
-listen(Port, ExtraOpts, true) ->
-    Opts = base_opts() ++ ExtraOpts ++ dmd_config:tls_listen_opts(),
-    case ssl:listen(Port, Opts) of
+listen(Port, ExtraOpts, {tls, SslOpts}) ->
+    case ssl:listen(Port, base_opts() ++ ExtraOpts ++ SslOpts) of
         {ok, S} -> {ok, {ssl, S}};
         Err -> Err
     end.
@@ -50,7 +50,7 @@ accept({ssl, L}) ->
     end.
 
 -spec connect(inet:socket_address(), inet:port_number(),
-              [gen_tcp:connect_option()], boolean()) ->
+              [gen_tcp:connect_option()], tls_arg()) ->
           {ok, socket()} | {error, term()}.
 connect(Host, Port, ExtraOpts, false) ->
     Opts = [binary, {packet, raw}, {active, false}, {nodelay, true}] ++ ExtraOpts,
@@ -58,9 +58,9 @@ connect(Host, Port, ExtraOpts, false) ->
         {ok, S} -> {ok, {gen_tcp, S}};
         Err -> Err
     end;
-connect(Host, Port, ExtraOpts, true) ->
+connect(Host, Port, ExtraOpts, {tls, SslOpts}) ->
     Opts = [binary, {packet, raw}, {active, false}, {nodelay, true}]
-        ++ ExtraOpts ++ dmd_config:tls_connect_opts(),
+        ++ ExtraOpts ++ SslOpts,
     case ssl:connect(Host, Port, Opts, 5000) of
         {ok, S} -> {ok, {ssl, S}};
         Err -> Err

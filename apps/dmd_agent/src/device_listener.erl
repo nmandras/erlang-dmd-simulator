@@ -6,20 +6,20 @@
 -module(device_listener).
 -behaviour(gen_server).
 
--export([start_link/3]).
+-export([start_link/4]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 
 -define(RECV_TIMEOUT, 5000).
 
-start_link(Sup, Port, IP) ->
-    gen_server:start_link(?MODULE, [Sup, Port, IP], []).
+start_link(Sup, IMEI, IP, Port) ->
+    gen_server:start_link(?MODULE, [Sup, IMEI, IP, Port], []).
 
-init([Sup, Port, IP]) ->
+init([Sup, IMEI, IP, Port]) ->
     process_flag(trap_exit, true),
     ExtraOpts = [{ip, IP}],
-    {ok, LSock} = dmd_transport:listen(Port, ExtraOpts, dmd_config:tls_enabled()),
+    {ok, LSock} = dmd_transport:listen(Port, ExtraOpts, dmd_config:listen_tls(dmd_agent)),
     Acceptor = spawn_acceptor(LSock, Sup),
-    {ok, #{lsock => LSock, acceptor => Acceptor, sup => Sup}}.
+    {ok, #{lsock => LSock, acceptor => Acceptor, sup => Sup, imei => IMEI}}.
 
 handle_call(_Req, _From, S) -> {reply, ok, S}.
 handle_cast(_Msg, S) -> {noreply, S}.
