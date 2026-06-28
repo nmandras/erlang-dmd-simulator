@@ -66,7 +66,10 @@ do_tick(S) ->
             Device = lists:nth(rand:uniform(length(Devices)), Devices),
             IMEI = maps:get(imei, Device),
             Cmd = random_command(),
+            T0 = erlang:monotonic_time(millisecond),
             Result = mgmt_commander:send_command(IMEI, Cmd),
+            Dt = erlang:monotonic_time(millisecond) - T0,
+            record(Cmd, Result, Dt),
             logger:info("DRIVER cmd=~s imei=~s result=~p",
                         [Cmd, IMEI, summarise(Result)], ?DOMAIN),
             S#{count => maps:get(count, S, 0) + 1}
@@ -81,3 +84,17 @@ random_command() ->
 
 summarise({ok, {Name, Code, _Data}}) -> {Name, Code};
 summarise(Other) -> Other.
+
+record(Cmd, Result, Dt) ->
+    dmd_metrics:incr(dmd_mgmt, driver_total),
+    dmd_metrics:incr(dmd_mgmt, cmd_key(Cmd)),
+    case Result of
+        {ok, {_Name, 0, _Data}} ->
+            dmd_metrics:incr(dmd_mgmt, driver_ok),
+            dmd_metrics:observe(dmd_mgmt, cmd_latency_ms, Dt);
+        _ ->
+            dmd_metrics:incr(dmd_mgmt, driver_failed)
+    end.
+
+cmd_key(stat) -> driver_stat;
+cmd_key(reboot) -> driver_reboot.

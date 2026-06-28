@@ -10,6 +10,9 @@ start_link() ->
 init([]) ->
     SupFlags = #{strategy => one_for_one, intensity => 10, period => 10},
     Children = [
+        %% Metrics first so it shuts down last and can report on termination.
+        #{id => dmd_metrics,
+          start => {dmd_metrics, start_link, [dmd_mgmt, [dmd, mgmt]]}},
         %% Registry before the listener/commander/driver that use it.
         #{id => mgmt_registry, start => {mgmt_registry, start_link, []}},
         #{id => mgmt_commander, start => {mgmt_commander, start_link, []}},

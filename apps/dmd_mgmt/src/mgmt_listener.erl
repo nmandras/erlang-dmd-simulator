@@ -62,6 +62,7 @@ handle_conn(Sock) ->
         {ok, Payload} ->
             Resp = case dmd_proto:decode_request(Payload) of
                        {call, IMEI, IP} ->
+                           dmd_metrics:incr(dmd_mgmt, calls_received),
                            logger:info("CALL recv imei=~s ip=~s", [IMEI, IP], ?DOMAIN),
                            mgmt_registry:touch(IMEI, IP, online),
                            dmd_proto:encode_response(call, 0);

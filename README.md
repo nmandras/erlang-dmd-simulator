@@ -95,6 +95,28 @@ The autonomous driver (`mgmt_driver`) picks a random device every
 `driver_min_ms`…`driver_max_ms` and sends a random command (mostly `STAT`,
 ~1-in-4 `REBOOT`). Disable it with `{driver_enabled, false}`.
 
+## Benchmarking metrics
+
+Each app runs a `dmd_metrics` collector that records counters (calls, commands,
+successes/failures) and timing samples (CALL and command latencies) at runtime
+via fire-and-forget casts. When the app is stopped (graceful shutdown, e.g.
+`Ctrl+C, a`), the collector renders an ASCII report — counter bar charts and
+latency histograms — into that app's log file:
+
+```
+==================== dmd_mgmt metrics (uptime 60s) ====================
+counters:
+  calls_received              61 |########################################
+  driver_total                10 |#######
+cmd_latency_ms: n=10 min=1 avg=1.2 max=2 p95=2
+   1-1     |############################## 8
+   2-2     |######## 2
+==================== end dmd_mgmt metrics ====================
+```
+
+`log/agent.log` and `log/mgmt.log` in this repo are a captured 60-second run.
+Render a report on demand with `dmd_metrics:report(dmd_mgmt)`.
+
 ## Requirements
 
 - Erlang/OTP 24+ and `rebar3`.
@@ -126,6 +148,19 @@ dmd_mgmt:send_command(<<"101000000000001">>, reboot). %% {ok,{<<"REBOOT">>,0,<<>
 dmd_mgmt:driver_count().                     %% autonomous commands issued so far
 dmd_agent:start_device(<<"101000000000011">>, {127,0,0,12}, 6000, 10000). %% add one
 ```
+
+## Windows x64 build
+
+`.beam` output is portable bytecode, so a Linux/macOS build runs on Windows x64
+— only the runtime is native. Build a staged distribution with `.bat` launchers:
+
+```sh
+./scripts/build_windows_x64.sh        # -> dist/windows-x64/ and dist/dmd-windows-x64.zip
+```
+
+Copy the folder to a Windows x64 machine that has Erlang/OTP for Windows
+installed (`erl` on PATH), then run `start_all.bat` (or `start_mgmt.bat` /
+`start_agent.bat`). Stopping the node flushes the metrics report to `log\`.
 
 ## TLS (optional)
 

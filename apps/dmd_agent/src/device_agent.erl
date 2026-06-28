@@ -95,11 +95,20 @@ terminate(_Reason, _State, _Data) -> ok.
 send_call(#{imei := IMEI, ip := IP}) ->
     Host = dmd_config:mgmt_host(dmd_agent),
     Port = dmd_config:mgmt_port(dmd_agent),
+    T0 = erlang:monotonic_time(millisecond),
     Result = do_call(IMEI, IP, Host, Port),
+    Dt = erlang:monotonic_time(millisecond) - T0,
+    record_call(Result, Dt),
     logger:info("CALL imei=~s ip=~s -> ~s:~b result=~p",
                 [IMEI, dmd_proto:ip_to_bin(IP),
                  dmd_proto:ip_to_bin(Host), Port, Result],
                 ?DOMAIN).
+
+record_call({<<"CALL">>, 0, _}, Dt) ->
+    dmd_metrics:incr(dmd_agent, calls_sent_ok),
+    dmd_metrics:observe(dmd_agent, call_latency_ms, Dt);
+record_call(_Other, _Dt) ->
+    dmd_metrics:incr(dmd_agent, calls_sent_failed).
 
 do_call(IMEI, IP, Host, Port) ->
     case dmd_transport:connect(Host, Port, [], dmd_config:connect_tls(dmd_agent)) of
@@ -119,4 +128,5 @@ do_call(IMEI, IP, Host, Port) ->
     end.
 
 log_command(#{imei := IMEI}, Cmd, Code) ->
+    dmd_metrics:incr(dmd_agent, commands_received),
     logger:info("CMD recv imei=~s cmd=~p code=~b", [IMEI, Cmd, Code], ?DOMAIN).

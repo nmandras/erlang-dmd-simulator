@@ -6,12 +6,13 @@
 -include_lib("stdlib/include/assert.hrl").
 
 -export([all/0, init_per_suite/1, end_per_suite/1]).
--export([calls_logged/1, command_works/1, driver_runs/1, unknown_device/1]).
+-export([calls_logged/1, command_works/1, driver_runs/1, unknown_device/1,
+         metrics_collected/1]).
 
 -define(MGMT_PORT, 5055).
 
 all() ->
-    [calls_logged, command_works, driver_runs, unknown_device].
+    [calls_logged, command_works, driver_runs, unknown_device, metrics_collected].
 
 init_per_suite(Config) ->
     Priv = ?config(priv_dir, Config),
@@ -66,6 +67,16 @@ driver_runs(Config) ->
 unknown_device(_Config) ->
     ?assertEqual({error, device_not_found},
                  dmd_mgmt:send_command(<<"999999999999999">>, stat)),
+    ok.
+
+%% Both apps collect counters/samples and can render a report on demand.
+metrics_collected(_Config) ->
+    #{counters := MgmtC} = dmd_metrics:snapshot(dmd_mgmt),
+    ?assert(maps:get(calls_received, MgmtC, 0) > 0),
+    #{counters := AgentC} = dmd_metrics:snapshot(dmd_agent),
+    ?assert(maps:get(calls_sent_ok, AgentC, 0) > 0),
+    ?assertEqual(ok, dmd_metrics:report(dmd_mgmt)),
+    ?assertEqual(ok, dmd_metrics:report(dmd_agent)),
     ok.
 
 %%====================================================================
