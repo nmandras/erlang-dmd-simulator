@@ -12,7 +12,7 @@ frame_length_test() ->
 
 call_round_trip_test() ->
     Bin = dmd_proto:encode_call(<<"101000000000001">>, {127,0,0,2}),
-    ?assertEqual(<<"CALL: 101000000000001,127.0.0.2">>, Bin),
+    ?assertEqual(<<"CALL:101000000000001,127.0.0.2">>, Bin),
     ?assertEqual({call, <<"101000000000001">>, <<"127.0.0.2">>},
                  dmd_proto:decode_request(Bin)).
 
@@ -35,5 +35,5 @@ valid_imei_test() ->
     ?assertNot(dmd_proto:valid_imei(<<"12345678901234x">>)).
 
 malformed_test() ->
-    ?assertEqual({error, malformed_call}, dmd_proto:decode_request(<<"CALL: x">>)),
+    ?assertEqual({error, malformed_call}, dmd_proto:decode_request(<<"CALL:x">>)),
     ?assertEqual({error, malformed_response}, dmd_proto:decode_response(<<"garbage">>)).

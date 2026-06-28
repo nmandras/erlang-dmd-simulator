@@ -26,7 +26,7 @@ least-significant byte first**, then the payload.
 
 | Direction        | Payload                              |
 |------------------|--------------------------------------|
-| agent → server   | `CALL: <15-digit-IMEI>,<own-ip>`     |
+| agent → server   | `CALL:<15-digit-IMEI>,<own-ip>`      |
 | server → agent   | `STAT`                               |
 | server → agent   | `REBOOT`                             |
 

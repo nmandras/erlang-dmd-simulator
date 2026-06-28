@@ -4,7 +4,7 @@
 %%% — the first two bytes give the payload length, least-significant byte first.
 %%%
 %%% Requests (payload):
-%%%   `CALL: <15-digit-IMEI>,<ip>'   agent -> server, periodic status
+%%%   `CALL:<15-digit-IMEI>,<ip>'    agent -> server, periodic status
 %%%   `STAT'                          server -> agent, ask for status
 %%%   `REBOOT'                        server -> agent, reboot
 %%%
@@ -50,7 +50,7 @@ read_msg(Transport, Timeout) ->
 
 -spec encode_call(binary(), term()) -> binary().
 encode_call(IMEI, IP) when is_binary(IMEI) ->
-    <<"CALL: ", IMEI/binary, ",", (ip_to_bin(IP))/binary>>.
+    <<"CALL:", IMEI/binary, ",", (ip_to_bin(IP))/binary>>.
 
 -spec encode_command(stat | reboot) -> binary().
 encode_command(stat) -> <<"STAT">>;
@@ -60,7 +60,7 @@ encode_command(reboot) -> <<"REBOOT">>.
           {call, binary(), binary()}
         | {command, stat | reboot | {unknown, binary()}}
         | {error, term()}.
-decode_request(<<"CALL: ", Rest/binary>>) ->
+decode_request(<<"CALL:", Rest/binary>>) ->
     case binary:split(Rest, <<",">>) of
         [IMEI, IP] -> {call, IMEI, IP};
         _ -> {error, malformed_call}
