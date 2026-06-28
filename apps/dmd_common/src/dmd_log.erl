@@ -11,6 +11,7 @@
 setup(Name, File, Domain) ->
     ok = filelib:ensure_dir(File),
     Config = #{
+        level => info,
         config => #{file => File},
         filter_default => stop,
         filters => [{domain,

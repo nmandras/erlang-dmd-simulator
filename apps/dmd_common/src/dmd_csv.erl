@@ -8,7 +8,8 @@
 %%% `callperiod' is in seconds on disk; it is parsed into `callperiod_ms'.
 -module(dmd_csv).
 
--export([read/1, write/2, generate/5, generate_file/2]).
+-export([read/1, write/2, generate/5, generate_file/2,
+         generate_scale/4, index_ip/1]).
 
 -type row() :: #{imei := binary(),
                  ip := inet:ip_address(),
@@ -50,6 +51,23 @@ generate(Count, StartImei, FirstOctet, Port, PeriodSec) ->
 -spec generate_file(file:name_all(), non_neg_integer()) -> ok | {error, term()}.
 generate_file(Path, Count) ->
     write(Path, generate(Count, ?START_IMEI, ?FIRST_OCTET, ?PORT, ?PERIOD_SEC)).
+
+%% Generate `Count' rows for scale tests, spanning the whole 127.0.0.0/8
+%% loopback block so far more than 254 devices get a distinct, bindable IP.
+-spec generate_scale(non_neg_integer(), integer(),
+                     inet:port_number(), non_neg_integer()) -> [row()].
+generate_scale(Count, StartImei, Port, PeriodSec) ->
+    [#{imei => integer_to_binary(StartImei + I),
+       ip => index_ip(I + 2),
+       port => Port,
+       callperiod_ms => PeriodSec * 1000}
+     || I <- lists:seq(0, Count - 1)].
+
+%% Map a non-negative integer (>= 2) to a 127.0.0.0/8 address, skipping
+%% 127.0.0.0 and 127.0.0.1 (the latter is the management host).
+-spec index_ip(non_neg_integer()) -> inet:ip4_address().
+index_ip(N) when N >= 2, N =< 16777215 ->
+    {127, (N bsr 16) band 255, (N bsr 8) band 255, N band 255}.
 
 %%====================================================================
 %% Internal

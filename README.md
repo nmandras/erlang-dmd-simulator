@@ -137,6 +137,32 @@ rebar3 eunit    # protocol + CSV unit tests
 rebar3 ct       # two-app integration (plain TCP) + TLS end-to-end
 ```
 
+## Docker & scale testing
+
+Each device binds its own listen socket, so a large fleet needs a high
+open-file limit. Run everything in a container where that limit can be raised:
+
+```sh
+./scripts/docker_test.sh                 # build image, run eunit + ct
+./scripts/docker_scale.sh                # 10000 devices for 40s (default)
+./scripts/docker_scale.sh 10000 60 10    # Count, DurationSec, PeriodSec
+```
+
+`docker_scale.sh` runs with `--ulimit nofile=1048576` (one listen socket per
+device) and widened ephemeral-port settings (`--sysctl`) to sustain the stream
+of short-lived CALL/command connections. It bind-mounts `./log`, so afterwards
+`log/agent_scale.log` and `log/mgmt_scale.log` hold the run — each ending with
+the metrics report (counter bar charts + latency histograms).
+
+The fleet CSV is generated with `dmd_csv:generate_scale/4`, which spreads device
+IPs across the whole `127.0.0.0/8` block (so far more than 254 devices each get
+a distinct, bindable loopback IP). To run the scale test directly (outside
+Docker) raise the limit yourself first:
+
+```sh
+ulimit -n 1048576 && ./scripts/scale_run.sh 10000 40 10
+```
+
 ## Run it
 
 ```sh

@@ -6,14 +6,14 @@
 -include_lib("stdlib/include/assert.hrl").
 
 -export([all/0, init_per_suite/1, end_per_suite/1]).
--export([calls_logged/1, command_works/1, driver_runs/1, unknown_device/1,
-         metrics_collected/1, call_triggers_stat/1]).
+-export([calls_logged/1, command_works/1, reboot_command/1, driver_runs/1,
+         unknown_device/1, metrics_collected/1, call_triggers_stat/1]).
 
 -define(MGMT_PORT, 5055).
 
 all() ->
-    [calls_logged, command_works, driver_runs, unknown_device,
-     call_triggers_stat, metrics_collected].
+    [calls_logged, command_works, reboot_command, call_triggers_stat,
+     driver_runs, unknown_device, metrics_collected].
 
 init_per_suite(Config) ->
     Priv = ?config(priv_dir, Config),
@@ -27,10 +27,12 @@ init_per_suite(Config) ->
     application:load(dmd_mgmt),
 
     set(dmd_agent, [{csv_file, Csv}, {mgmt_host, {127,0,0,1}}, {mgmt_port, ?MGMT_PORT},
-                    {reboot_duration_ms, 1000}, {log_file, AgentLog}, {tls, false}]),
+                    {reboot_duration_ms, 1000},
+                    {log_file, AgentLog}, {tls, false}]),
+    %% Driver disabled so device state stays deterministic for the explicit
+    %% command tests; driver_runs exercises it on demand via driver_trigger.
     set(dmd_mgmt, [{csv_file, Csv}, {mgmt_host, {127,0,0,1}}, {mgmt_port, ?MGMT_PORT},
-                   {log_file, MgmtLog}, {driver_enabled, true},
-                   {driver_min_ms, 300}, {driver_max_ms, 800}, {tls, false}]),
+                   {log_file, MgmtLog}, {driver_enabled, false}, {tls, false}]),
 
     {ok, _} = application:ensure_all_started(dmd_mgmt),
     {ok, _} = application:ensure_all_started(dmd_agent),
@@ -48,8 +50,8 @@ calls_logged(Config) ->
         length(Ds) >= 3 andalso
             lists:all(fun(M) -> maps:get(calls, M, 0) > 0 end, Ds)
     end, 100),
-    ?assert(file_contains(?config(agent_log, Config), <<"CALL imei=">>)),
-    ?assert(file_contains(?config(mgmt_log, Config), <<"CALL recv imei=">>)),
+    ok = wait_file(?config(agent_log, Config), <<"CALL imei=">>),
+    ok = wait_file(?config(mgmt_log, Config), <<"CALL recv imei=">>),
     ok.
 
 %% Explicit STAT round-trips with a success code and status payload.
@@ -59,10 +61,24 @@ command_works(_Config) ->
     ?assert(byte_size(Data) > 0),
     ok.
 
-%% The autonomous driver issues commands and they are traceable in the log.
+%% REBOOT acks (code 0); STAT fails (code 1) while rebooting, then recovers.
+reboot_command(_Config) ->
+    IMEI = <<"101000000000003">>,
+    {ok, {<<"REBOOT">>, 0, _}} = dmd_mgmt:send_command(IMEI, reboot),
+    {ok, {<<"STAT">>, 1, _}} = dmd_mgmt:send_command(IMEI, stat),
+    ok = wait_until(fun() ->
+        case dmd_mgmt:send_command(IMEI, stat) of
+            {ok, {<<"STAT">>, 0, _}} -> true;
+            _ -> false
+        end
+    end, 100),
+    ok.
+
+%% The driver issues commands on demand and they are traceable in the log.
 driver_runs(Config) ->
+    [dmd_mgmt:driver_trigger() || _ <- lists:seq(1, 3)],
     ok = wait_until(fun() -> dmd_mgmt:driver_count() > 0 end, 100),
-    ?assert(file_contains(?config(mgmt_log, Config), <<"DRIVER cmd=">>)),
+    ok = wait_file(?config(mgmt_log, Config), <<"DRIVER cmd=">>),
     ok.
 
 unknown_device(_Config) ->
@@ -106,6 +122,10 @@ file_contains(Path, Needle) ->
         {ok, Bin} -> binary:match(Bin, Needle) =/= nomatch;
         _ -> false
     end.
+
+%% Poll for a log line; the logger file handler flushes asynchronously.
+wait_file(Path, Needle) ->
+    wait_until(fun() -> file_contains(Path, Needle) end, 100).
 
 wait_until(_Fun, 0) -> {error, timeout};
 wait_until(Fun, N) ->
