@@ -1,0 +1,7 @@
+/_build/
+/.rebar3/
+rebar.lock
+*.beam
+erl_crash.dump
+/priv/certs/*.pem
+/priv/certs/*.key

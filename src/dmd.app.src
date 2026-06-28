@@ -1,0 +1,21 @@
+{application, dmd,
+ [{description, "TCP client/server simulator for a fleet of managed devices (routers)"},
+  {vsn, "0.1.0"},
+  {registered, [dmd_sup, mgmt_sup, device_sup,
+                mgmt_registry, mgmt_listener, mgmt_commander]},
+  {mod, {dmd_app, []}},
+  {applications, [kernel, stdlib, ssl]},
+  {env, [
+    {mgmt_host, {127,0,0,1}},
+    {mgmt_port, 5000},
+    {device_port, 6000},
+    {device_ip_first_octet, 2},
+    {call_interval_ms, 10000},
+    {reboot_duration_ms, 5000},
+    {tls, false},
+    {tls_opts, []}
+  ]},
+  {modules, []},
+  {licenses, ["Apache-2.0"]},
+  {links, []}
+ ]}.
