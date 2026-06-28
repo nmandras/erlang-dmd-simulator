@@ -7,12 +7,13 @@
 
 -export([all/0, init_per_suite/1, end_per_suite/1]).
 -export([calls_logged/1, command_works/1, driver_runs/1, unknown_device/1,
-         metrics_collected/1]).
+         metrics_collected/1, call_triggers_stat/1]).
 
 -define(MGMT_PORT, 5055).
 
 all() ->
-    [calls_logged, command_works, driver_runs, unknown_device, metrics_collected].
+    [calls_logged, command_works, driver_runs, unknown_device,
+     call_triggers_stat, metrics_collected].
 
 init_per_suite(Config) ->
     Priv = ?config(priv_dir, Config),
@@ -67,6 +68,19 @@ driver_runs(Config) ->
 unknown_device(_Config) ->
     ?assertEqual({error, device_not_found},
                  dmd_mgmt:send_command(<<"999999999999999">>, stat)),
+    ok.
+
+%% Each received CALL makes the server poll the caller with a STAT, which the
+%% device records as a received command.
+call_triggers_stat(_Config) ->
+    ok = wait_until(fun() ->
+        #{counters := C} = dmd_metrics:snapshot(dmd_mgmt),
+        maps:get(call_triggered_stat, C, 0) > 0
+    end, 100),
+    ok = wait_until(fun() ->
+        #{counters := C} = dmd_metrics:snapshot(dmd_agent),
+        maps:get(commands_received, C, 0) > 0
+    end, 100),
     ok.
 
 %% Both apps collect counters/samples and can render a report on demand.

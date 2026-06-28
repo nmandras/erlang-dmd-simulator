@@ -91,6 +91,11 @@ Example:
 2026-06-28 09:20:03.784 info DRIVER cmd=stat imei=101000000000006 result={<<"STAT">>,0}
 ```
 
+On every CALL it receives, the server polls the calling device by issuing a
+`STAT` back to it (asynchronously, so the CALL response is not delayed). These
+appear in `log/mgmt.log` as `CMD send … reason=on_call` and in `log/agent.log`
+as `CMD recv … cmd=stat`. Disable with `{stat_on_call, false}`.
+
 The autonomous driver (`mgmt_driver`) picks a random device every
 `driver_min_ms`…`driver_max_ms` and sends a random command (mostly `STAT`,
 ~1-in-4 `REBOOT`). Disable it with `{driver_enabled, false}`.
@@ -179,5 +184,5 @@ with `listen` (`certfile`/`keyfile`) and `connect` options. For a real CA use
 
 Per-application `dmd_agent` / `dmd_mgmt` env keys (see `config/sys.config`):
 `csv_file`, `mgmt_host`, `mgmt_port`, `log_file`, `tls`, `tls_opts`;
-agent-only `reboot_duration_ms`; server-only `driver_enabled`, `driver_min_ms`,
-`driver_max_ms`.
+agent-only `reboot_duration_ms`; server-only `stat_on_call`, `driver_enabled`,
+`driver_min_ms`, `driver_max_ms`.

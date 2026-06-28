@@ -5,18 +5,27 @@
 -module(mgmt_commander).
 -behaviour(gen_server).
 
--export([start_link/0, send_command/2]).
+-export([start_link/0, send_command/2, send_async/3]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 
 -define(RECV_TIMEOUT, 5000).
+-define(DOMAIN, #{domain => [dmd, mgmt]}).
 
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
+%% Synchronous send: dial the device, send the command, return its response.
 -spec send_command(binary(), stat | reboot) ->
           {ok, {binary(), non_neg_integer(), binary()}} | {error, term()}.
 send_command(IMEI, Cmd) when Cmd =:= stat; Cmd =:= reboot ->
     gen_server:call(?MODULE, {send, IMEI, Cmd}, 15000).
+
+%% Fire-and-forget send, run in its own process so it never blocks the caller
+%% (or the commander). `Reason' is a short tag included in the trace log, e.g.
+%% the event that triggered the command.
+-spec send_async(binary(), stat | reboot, atom()) -> ok.
+send_async(IMEI, Cmd, Reason) when Cmd =:= stat; Cmd =:= reboot ->
+    gen_server:cast(?MODULE, {send_async, IMEI, Cmd, Reason}).
 
 init([]) -> {ok, #{}}.
 
@@ -25,9 +34,19 @@ handle_call({send, IMEI, Cmd}, _From, S) ->
 handle_call(_Req, _From, S) ->
     {reply, {error, unknown_request}, S}.
 
+handle_cast({send_async, IMEI, Cmd, Reason}, S) ->
+    spawn(fun() ->
+        Result = do_send(IMEI, Cmd),
+        logger:info("CMD send cmd=~s imei=~s reason=~s result=~p",
+                    [Cmd, IMEI, Reason, summarise(Result)], ?DOMAIN)
+    end),
+    {noreply, S};
 handle_cast(_Msg, S) -> {noreply, S}.
 handle_info(_Info, S) -> {noreply, S}.
 terminate(_Reason, _S) -> ok.
+
+summarise({ok, {Name, Code, _Data}}) -> {Name, Code};
+summarise(Other) -> Other.
 
 do_send(IMEI, Cmd) ->
     case mgmt_registry:lookup(IMEI) of

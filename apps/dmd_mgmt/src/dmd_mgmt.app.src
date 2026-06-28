@@ -9,6 +9,7 @@
     {mgmt_host, {127,0,0,1}},
     {mgmt_port, 5000},
     {log_file, "log/mgmt.log"},
+    {stat_on_call, true},
     {driver_enabled, true},
     {driver_min_ms, 3000},
     {driver_max_ms, 8000},

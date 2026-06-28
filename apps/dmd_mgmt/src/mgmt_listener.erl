@@ -65,6 +65,7 @@ handle_conn(Sock) ->
                            dmd_metrics:incr(dmd_mgmt, calls_received),
                            logger:info("CALL recv imei=~s ip=~s", [IMEI, IP], ?DOMAIN),
                            mgmt_registry:touch(IMEI, IP, online),
+                           maybe_stat_on_call(IMEI),
                            dmd_proto:encode_response(call, 0);
                        _ ->
                            logger:warning("bad request: ~p", [Payload], ?DOMAIN),
@@ -75,3 +76,14 @@ handle_conn(Sock) ->
             ok
     end,
     dmd_transport:close(Sock).
+
+%% On each CALL, the server polls the device by issuing a STAT back to it
+%% (asynchronously, so the CALL response is not delayed). Gated by config.
+maybe_stat_on_call(IMEI) ->
+    case dmd_config:get(dmd_mgmt, stat_on_call, true) of
+        true ->
+            dmd_metrics:incr(dmd_mgmt, call_triggered_stat),
+            mgmt_commander:send_async(IMEI, stat, on_call);
+        false ->
+            ok
+    end.
