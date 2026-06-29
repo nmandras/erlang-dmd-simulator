@@ -103,12 +103,17 @@ scope in this slice; the AES password KDF is undocumented.)
 
 The protocol lives in the standalone `wme` library app (`wme_checksum`,
 `wme_codec`, `wme_transport`, `wme_handshake`, `wme_client`, `wme_sim_device`).
-On the device side, `device_wme_listener` serves a per-device config blob
-(`device_wme:config_blob/2`, derived from the IMEI). Read one from the server:
+On the device side, `device_wme_listener` serves a realistic per-device config
+blob (`device_wme:config_blob/2`) — the usual WM-E `key = value` dump, with the
+modem IMEI, engine id and signal levels derived from the device's IMEI. Read one
+from the server:
 
 ```erlang
 dmd_mgmt:wme_read_config(<<"101000000000001">>, config).
-%% {ok, <<"WME-CONFIG imei=101000000000001\nparam001=2\n...">>}  (744 bytes)
+%% {ok, <<"conn.apn_name = wm2m\nconn.apn_user = xxxxxxxx\n...
+%%        smp.modem_imei = 101000000000001, ICC = ...\n
+%%        smp.os_version = EC200A ... RSSI=-83 SINR=7 RSRQ=-9 RSRP=-101\n
+%%        smp.engineID = 0x8000CBCE03000000000001\n">>}   (~3 KB, ~12 V1 packets)
 ```
 
 Disable the per-device WME listener with `{wme_enabled, false}` (the scale
