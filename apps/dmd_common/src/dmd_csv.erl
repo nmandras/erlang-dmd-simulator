@@ -1,28 +1,28 @@
-%%% @doc Device inventory CSV shared by the agent and the management server.
+%%% @doc Device inventory CSV, shared by the agent and the management server.
 %%%
-%%% Format (an optional `imei,...' header and `#' comment lines are skipped):
-%%% ```
-%%% imei,ip,port,callperiod
-%%% 101000000000001,127.0.0.2,6000,10
-%%% '''
-%%% `callperiod' is in seconds on disk; it is parsed into `callperiod_ms'.
+%%% Columns:
+%%%   IMEI,IP,MgmtPort,PortSSH,DeviceType,TLSEnable,Reptime,
+%%%   LoginName,LoginPass,EquipmentGroup,Comments
+%%%
+%%% DeviceType 1 = wmr (CALL + STAT/REBOOT/SECLOG text listener),
+%%% DeviceType 2 = wme (CALL + WM-E config-read listener).
+%%% Reptime is the CALL period in seconds. TLSEnable/PortSSH/LoginName/
+%%% LoginPass/EquipmentGroup/Comments are stored as metadata.
 -module(dmd_csv).
 
--export([read/1, write/2, generate/5, generate_file/2,
-         generate_scale/4, index_ip/1]).
+-export([read/1, write/2, generate/3, generate_scale/3, generate_file/3]).
 
--type row() :: #{imei := binary(),
-                 ip := inet:ip_address(),
-                 port := inet:port_number(),
-                 callperiod_ms := non_neg_integer()}.
+-type row() :: #{imei := binary(), ip := inet:ip4_address(),
+                 port := inet:port_number(), ssh_port := inet:port_number(),
+                 device_type := 1 | 2, tls := boolean(),
+                 period_ms := non_neg_integer(),
+                 login_name := binary(), login_pass := binary(),
+                 group := binary(), comments := binary()}.
 -export_type([row/0]).
 
-%% Defaults for the standard fleet: IMEIs from 101000000000001, loopback IPs
-%% from 127.0.0.2, shared port 6000, 10-second call period.
--define(START_IMEI, 101000000000001).
--define(FIRST_OCTET, 2).
--define(PORT, 6000).
--define(PERIOD_SEC, 10).
+-define(HEADER,
+        <<"IMEI,IP,MgmtPort,PortSSH,DeviceType,TLSEnable,Reptime,"
+          "LoginName,LoginPass,EquipmentGroup,Comments\n">>).
 
 -spec read(file:name_all()) -> {ok, [row()]} | {error, term()}.
 read(Path) ->
@@ -33,45 +33,56 @@ read(Path) ->
 
 -spec write(file:name_all(), [row()]) -> ok | {error, term()}.
 write(Path, Rows) ->
-    Header = <<"imei,ip,port,callperiod\n">>,
-    Body = [row_to_line(R) || R <- Rows],
-    file:write_file(Path, [Header | Body]).
+    file:write_file(Path, [?HEADER | [row_to_line(R) || R <- Rows]]).
 
-%% Build `Count' rows of inventory.
--spec generate(non_neg_integer(), integer(), 1..254,
-               inet:port_number(), non_neg_integer()) -> [row()].
-generate(Count, StartImei, FirstOctet, Port, PeriodSec) ->
-    [#{imei => integer_to_binary(StartImei + I - 1),
-       ip => {127, 0, 0, FirstOctet + I - 1},
-       port => Port,
-       callperiod_ms => PeriodSec * 1000}
-     || I <- lists:seq(1, Count)].
+%% Build Wmr type-1 rows followed by Wme type-2 rows. Opts keys: start_imei,
+%% base_ip, mgmt_port, period_sec (all optional).
+-spec generate(non_neg_integer(), non_neg_integer(), map()) -> [row()].
+generate(Wmr, Wme, Opts) ->
+    StartImei = maps:get(start_imei, Opts, 1),
+    Base = maps:get(base_ip, Opts, {127, 10, 0, 1}),
+    Port = maps:get(mgmt_port, Opts, 6000),
+    Period = maps:get(period_sec, Opts, 30),
+    Total = Wmr + Wme,
+    [row(StartImei + I, ip_add(Base, I), Port,
+         type_of(I, Wmr), Period) || I <- lists:seq(0, Total - 1)].
 
-%% Generate and write the standard fleet of `Count' devices.
--spec generate_file(file:name_all(), non_neg_integer()) -> ok | {error, term()}.
-generate_file(Path, Count) ->
-    write(Path, generate(Count, ?START_IMEI, ?FIRST_OCTET, ?PORT, ?PERIOD_SEC)).
+%% Scale generation: spread IPs across the 127.0.0.0/8 loopback block.
+-spec generate_scale(non_neg_integer(), non_neg_integer(), non_neg_integer()) -> [row()].
+generate_scale(Wmr, Wme, PeriodSec) ->
+    generate(Wmr, Wme, #{start_imei => 1, base_ip => {127, 0, 0, 2},
+                         mgmt_port => 6000, period_sec => PeriodSec}).
 
-%% Generate `Count' rows for scale tests, spanning the whole 127.0.0.0/8
-%% loopback block so far more than 254 devices get a distinct, bindable IP.
--spec generate_scale(non_neg_integer(), integer(),
-                     inet:port_number(), non_neg_integer()) -> [row()].
-generate_scale(Count, StartImei, Port, PeriodSec) ->
-    [#{imei => integer_to_binary(StartImei + I),
-       ip => index_ip(I + 2),
-       port => Port,
-       callperiod_ms => PeriodSec * 1000}
-     || I <- lists:seq(0, Count - 1)].
-
-%% Map a non-negative integer (>= 2) to a 127.0.0.0/8 address, skipping
-%% 127.0.0.0 and 127.0.0.1 (the latter is the management host).
--spec index_ip(non_neg_integer()) -> inet:ip4_address().
-index_ip(N) when N >= 2, N =< 16777215 ->
-    {127, (N bsr 16) band 255, (N bsr 8) band 255, N band 255}.
+-spec generate_file(file:name_all(), non_neg_integer(), non_neg_integer()) ->
+          ok | {error, term()}.
+generate_file(Path, Wmr, Wme) ->
+    write(Path, generate(Wmr, Wme, #{start_imei => 101000000000001})).
 
 %%====================================================================
 %% Internal
 %%====================================================================
+
+type_of(I, Wmr) when I < Wmr -> 1;
+type_of(_I, _Wmr) -> 2.
+
+row(ImeiInt, IP, Port, DeviceType, PeriodSec) ->
+    #{imei => iolist_to_binary(io_lib:format("~15..0b", [ImeiInt])),
+      ip => IP,
+      port => Port,
+      ssh_port => 22,
+      device_type => DeviceType,
+      tls => false,
+      period_ms => PeriodSec * 1000,
+      login_name => <<"root">>,
+      login_pass => <<"admin">>,
+      group => <<"Group-1">>,
+      comments => <<>>}.
+
+ip_add({A, B, C, D}, N) ->
+    X = (A bsl 24) bor (B bsl 16) bor (C bsl 8) bor D,
+    Y = X + N,
+    {(Y bsr 24) band 16#FF, (Y bsr 16) band 16#FF,
+     (Y bsr 8) band 16#FF, Y band 16#FF}.
 
 parse(Bin) ->
     Lines = binary:split(Bin, [<<"\n">>, <<"\r\n">>], [global]),
@@ -84,11 +95,19 @@ parse_line(Line0) ->
             false;
         true ->
             case binary:split(Line, <<",">>, [global]) of
-                [Imei, Ip, Port, Period] ->
-                    {true, #{imei => trim(Imei),
-                             ip => parse_ip(Ip),
-                             port => binary_to_integer(trim(Port)),
-                             callperiod_ms => binary_to_integer(trim(Period)) * 1000}};
+                [IMEI, IP, MgmtPort, SSH, DType, TLS, Rep,
+                 LName, LPass, Group | CommentsParts] ->
+                    {true, #{imei => trim(IMEI),
+                             ip => parse_ip(IP),
+                             port => to_int(MgmtPort),
+                             ssh_port => to_int(SSH),
+                             device_type => to_int(DType),
+                             tls => to_int(TLS) =:= 1,
+                             period_ms => to_int(Rep) * 1000,
+                             login_name => trim(LName),
+                             login_pass => trim(LPass),
+                             group => trim(Group),
+                             comments => trim(join_commas(CommentsParts))}};
                 _ ->
                     false
             end
@@ -96,12 +115,26 @@ parse_line(Line0) ->
 
 is_data_line(<<>>) -> false;
 is_data_line(<<"#", _/binary>>) -> false;
-is_data_line(<<"imei", _/binary>>) -> false;
+is_data_line(<<"IMEI", _/binary>>) -> false;
 is_data_line(_) -> true.
 
-row_to_line(#{imei := Imei, ip := Ip, port := Port, callperiod_ms := Ms}) ->
-    io_lib:format("~s,~s,~b,~b~n",
-                  [Imei, dmd_proto:ip_to_bin(Ip), Port, Ms div 1000]).
+row_to_line(#{imei := IMEI, ip := IP, port := Port, ssh_port := SSH,
+              device_type := DType, tls := TLS, period_ms := Ms,
+              login_name := LName, login_pass := LPass,
+              group := Group, comments := Comments}) ->
+    io_lib:format("~s,~s,~b,~b,~b,~b,~b,~s,~s,~s,~s~n",
+                  [IMEI, dmd_proto:ip_to_bin(IP), Port, SSH, DType,
+                   bool_int(TLS), Ms div 1000, LName, LPass, Group, Comments]).
+
+bool_int(true) -> 1;
+bool_int(false) -> 0.
+
+join_commas([]) -> <<>>;
+join_commas([X]) -> X;
+join_commas(Parts) -> iolist_to_binary(lists:join(<<",">>, Parts)).
+
+to_int(Bin) ->
+    try binary_to_integer(trim(Bin)) catch _:_ -> 0 end.
 
 parse_ip(Bin) ->
     case inet:parse_address(binary_to_list(trim(Bin))) of

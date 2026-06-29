@@ -22,8 +22,8 @@ maybe_load_csv() ->
         Path ->
             case dmd_csv:read(Path) of
                 {ok, Rows} ->
-                    [mgmt_registry:register(Imei, IP, Port, provisioned)
-                     || #{imei := Imei, ip := IP, port := Port} <- Rows],
+                    [mgmt_registry:register(maps:get(imei, Row), Row#{status => provisioned})
+                     || Row <- Rows],
                     logger:info("inventory loaded from ~s: ~b device(s)",
                                 [Path, length(Rows)], #{domain => [dmd, mgmt]});
                 {error, Reason} ->

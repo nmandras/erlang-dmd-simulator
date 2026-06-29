@@ -4,17 +4,16 @@
 -module(device_wme_listener).
 -behaviour(gen_server).
 
--export([start_link/2]).
+-export([start_link/3]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 
 -define(SESSION_TIMEOUT, 30000).
 
-start_link(IMEI, IP) ->
-    gen_server:start_link(?MODULE, [IMEI, IP], []).
+start_link(IMEI, IP, Port) ->
+    gen_server:start_link(?MODULE, [IMEI, IP, Port], []).
 
-init([IMEI, IP]) ->
+init([IMEI, IP, Port]) ->
     process_flag(trap_exit, true),
-    Port = dmd_config:get(dmd_agent, wme_port, 9998),
     {ok, LSock} = wme_transport:listen(Port, IP),
     {ok, #{lsock => LSock, acceptor => spawn_acceptor(LSock, IMEI), imei => IMEI}}.
 
@@ -39,7 +38,7 @@ spawn_acceptor(LSock, IMEI) ->
 accept_loop(LSock, IMEI) ->
     case wme_transport:accept(LSock) of
         {ok, Sock} ->
-            Ident = dmd_config:get(dmd_agent, wme_ident, device_wme:ident(IMEI)),
+            Ident = device_wme:ident(IMEI),
             Provider = fun(Option) -> device_wme:config_blob(IMEI, Option) end,
             Pid = spawn(fun() ->
                 receive go ->

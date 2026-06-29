@@ -20,8 +20,11 @@ all() ->
 init_per_suite(Config) ->
     Priv = ?config(priv_dir, Config),
     Csv = filename:join(Priv, "devices.csv"),
-    %% 3 devices on 127.0.0.31..33:6060, 1-second call period.
-    ok = dmd_csv:write(Csv, dmd_csv:generate(3, 101000000000001, 31, 6060, 1)),
+    %% 2 wmr + 1 wme device on 127.10.0.x:6060, 1-second call period.
+    ok = dmd_csv:write(Csv, dmd_csv:generate(2, 1, #{start_imei => 101000000000001,
+                                                     base_ip => {127,10,0,31},
+                                                     mgmt_port => 6060,
+                                                     period_sec => 1})),
     AgentLog = filename:join(Priv, "agent.log"),
     MgmtLog = filename:join(Priv, "mgmt.log"),
 
@@ -65,7 +68,7 @@ command_works(_Config) ->
 
 %% REBOOT acks (code 0); STAT fails (code 1) while rebooting, then recovers.
 reboot_command(_Config) ->
-    IMEI = <<"101000000000003">>,
+    IMEI = <<"101000000000002">>,  %% wmr device
     {ok, {<<"REBOOT">>, 0, _}} = dmd_mgmt:send_command(IMEI, reboot),
     {ok, {<<"STAT">>, 1, _}} = dmd_mgmt:send_command(IMEI, stat),
     ok = wait_until(fun() ->
@@ -91,7 +94,7 @@ unknown_device(_Config) ->
 %% The server acts as a WMETerm client and reads the device's WM-E config blob
 %% over the device's WM-E port; it matches what the device serves.
 wme_config_read(_Config) ->
-    IMEI = <<"101000000000001">>,
+    IMEI = <<"101000000000003">>,  %% wme device
     {ok, Blob} = dmd_mgmt:wme_read_config(IMEI, config),
     {ok, Expected} = device_wme:config_blob(IMEI, 16#FF),
     ?assertEqual(Expected, Blob),

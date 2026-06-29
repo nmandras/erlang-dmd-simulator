@@ -11,7 +11,7 @@ OTP applications** sharing a common library:
 | `dmd_common` | Shared library: wire protocol, transport, config, CSV, logging.      |
 | `wme`        | WM-E (WME) protocol library: IEC handshake + config read, client and device simulator (see below). |
 
-Both applications read the same **device inventory CSV** (`imei,ip,port,callperiod`),
+Both applications read the same **device inventory CSV** (with a per-device `DeviceType`),
 so the agent knows which devices to spawn and the server knows where to reach them.
 
 ## Wire protocol
@@ -78,28 +78,34 @@ on-CALL STAT completes and reports `SECSTAT:1`, it immediately follows up with a
 
 ## Device inventory CSV
 
-`config/devices.csv` ships with 10 devices, IMEIs `101000000000001`…`101000000000010`,
-loopback IPs `127.0.0.2`…`127.0.0.11`, port `6000`, and a `10`-second call period:
+`config/devices.csv` lists the fleet, one device per row:
 
 ```
-imei,ip,port,callperiod
-101000000000001,127.0.0.2,6000,10
-...
+IMEI,IP,MgmtPort,PortSSH,DeviceType,TLSEnable,Reptime,LoginName,LoginPass,EquipmentGroup,Comments
+101000000000001,127.10.0.1,6000,22,1,0,10,root,admin,Group-1,
+101000000000009,127.10.0.9,6000,22,2,0,10,root,admin,Group-2,
 ```
 
-`callperiod` is in seconds. Regenerate it from the shell with
-`dmd_csv:generate_file("config/devices.csv", 10).`
+- **DeviceType** selects the device's inbound listener: `1` = **wmr** (CALL +
+  STAT/REBOOT/SECLOG text protocol), `2` = **wme** (CALL + WM-E config read).
+  Every device sends the periodic CALL regardless of type.
+- **MgmtPort** is the device's listen port; **Reptime** is the CALL period in
+  seconds. **PortSSH**, **TLSEnable**, **LoginName**, **LoginPass**,
+  **EquipmentGroup** and **Comments** are stored as metadata.
+
+Generate one from the shell — `dmd_csv:generate_file("config/devices.csv", Wmr, Wme)`
+or, with options, `dmd_csv:generate(Wmr, Wme, #{start_imei => 1, base_ip => {127,10,0,1}, mgmt_port => 6000, period_sec => 30})`.
 
 ## WME protocol (config read)
 
-Alongside the text protocol, each device also speaks the **WM-E (WME) wire
-protocol** as a *server* on its own IP at `wme_port` (default `9998`), and the
-management server acts as the **WMETerm client**. This is a focused slice of the
-WM-E spec: the IEC 62056-21 identification handshake (`/?…!` → `/ELS…` → `059`)
-followed by a config **read** (start-read `0x67` → header `0x68` → packet
-`0x70`/`0x71`), with per-frame XOR checksums and a Fletcher-16 integrity check
-over the reassembled blob. (Write, syslog, baud-change and password are out of
-scope in this slice; the AES password KDF is undocumented.)
+Devices whose `DeviceType` is `2` speak the **WM-E (WME) wire protocol** as a
+*server* on their own IP at `MgmtPort`, and the management server acts as the
+**WMETerm client**. This is a focused slice of the WM-E spec: the IEC 62056-21
+identification handshake (`/?…!` → `/ELS…` → `059`) followed by a config **read**
+(start-read `0x67` → header `0x68` → packet `0x70`/`0x71`), with per-frame XOR
+checksums and a Fletcher-16 integrity check over the reassembled blob. (Write,
+syslog, baud-change and password are out of scope in this slice; the AES
+password KDF is undocumented.)
 
 The protocol lives in the standalone `wme` library app (`wme_checksum`,
 `wme_codec`, `wme_transport`, `wme_handshake`, `wme_client`, `wme_sim_device`).
@@ -109,15 +115,12 @@ modem IMEI, engine id and signal levels derived from the device's IMEI. Read one
 from the server:
 
 ```erlang
-dmd_mgmt:wme_read_config(<<"101000000000001">>, config).
+dmd_mgmt:wme_read_config(<<"101000000000009">>, config).   %% a DeviceType=2 device
 %% {ok, <<"conn.apn_name = wm2m\nconn.apn_user = xxxxxxxx\n...
-%%        smp.modem_imei = 101000000000001, ICC = ...\n
+%%        smp.modem_imei = 101000000000009, ICC = ...\n
 %%        smp.os_version = EC200A ... RSSI=-83 SINR=7 RSRQ=-9 RSRP=-101\n
-%%        smp.engineID = 0x8000CBCE03000000000001\n">>}   (~3 KB, ~12 V1 packets)
+%%        smp.engineID = 0x8000CBCE03000000000009\n">>}   (~3 KB, ~12 V1 packets)
 ```
-
-Disable the per-device WME listener with `{wme_enabled, false}` (the scale
-runner does this so it keeps a single listen socket per device).
 
 ## Architecture
 
@@ -207,25 +210,32 @@ rebar3 ct       # two-app integration (plain TCP) + TLS end-to-end
 Each device binds its own listen socket, so a large fleet needs a high
 open-file limit. Run everything in a container where that limit can be raised:
 
+The scale test takes the **wmr and wme device counts** separately, so each
+device type can be generated and benchmarked:
+
 ```sh
-./scripts/docker_test.sh                 # build image, run eunit + ct
-./scripts/docker_scale.sh                # 10000 devices for 40s (default)
-./scripts/docker_scale.sh 10000 60 10    # Count, DurationSec, PeriodSec
+./scripts/docker_test.sh                    # build image, run eunit + ct
+./scripts/docker_scale.sh                   # 8000 wmr + 2000 wme for 40s (default)
+./scripts/docker_scale.sh 8000 2000 60 10   # Wmr, Wme, DurationSec, PeriodSec
 ```
 
 `docker_scale.sh` runs with `--ulimit nofile=1048576` (one listen socket per
 device) and widened ephemeral-port settings (`--sysctl`) to sustain the stream
-of short-lived CALL/command connections. It bind-mounts `./log`, so afterwards
-`log/agent_scale.log` and `log/mgmt_scale.log` hold the run — each ending with
-the metrics report (counter bar charts + latency histograms).
+of short-lived connections. It bind-mounts `./log`, so afterwards
+`log/agent_scale.log` and `log/mgmt_scale.log` hold the run (each ending with
+the metrics report), and the run prints a per-type summary:
 
-The fleet CSV is generated with `dmd_csv:generate_scale/4`, which spreads device
+- **wmr**: CALL/STAT/SECLOG counters and latency histograms.
+- **wme**: a concurrent config-read benchmark — reads/s, MB/s and average
+  latency (e.g. ~3000 reads/s, ~8.5 MB/s at concurrency 50).
+
+The fleet CSV is generated with `dmd_csv:generate_scale/3`, which spreads device
 IPs across the whole `127.0.0.0/8` block (so far more than 254 devices each get
-a distinct, bindable loopback IP). To run the scale test directly (outside
-Docker) raise the limit yourself first:
+a distinct, bindable loopback IP). To run directly (outside Docker) raise the
+limit yourself first:
 
 ```sh
-ulimit -n 1048576 && ./scripts/scale_run.sh 10000 40 10
+ulimit -n 1048576 && ./scripts/scale_run.sh 8000 2000 40 10
 ```
 
 ## Run it

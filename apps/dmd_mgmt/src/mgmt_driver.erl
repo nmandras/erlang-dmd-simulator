@@ -59,7 +59,8 @@ schedule(S) ->
     S.
 
 do_tick(S) ->
-    case mgmt_registry:all() of
+    %% Only wmr devices accept text STAT/REBOOT commands.
+    case [D || D <- mgmt_registry:all(), maps:get(device_type, D, 1) =:= 1] of
         [] ->
             S;
         Devices ->

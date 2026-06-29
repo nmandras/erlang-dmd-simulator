@@ -10,8 +10,8 @@
 load_csv(Path) ->
     case dmd_csv:read(Path) of
         {ok, Rows} ->
-            [mgmt_registry:register(Imei, IP, Port, provisioned)
-             || #{imei := Imei, ip := IP, port := Port} <- Rows],
+            [mgmt_registry:register(maps:get(imei, Row), Row#{status => provisioned})
+             || Row <- Rows],
             {ok, length(Rows)};
         {error, Reason} ->
             {error, Reason}
@@ -41,8 +41,7 @@ driver_count() -> mgmt_driver:count().
           {ok, binary()} | {error, term()}.
 wme_read_config(IMEI, Object) ->
     case mgmt_registry:lookup(IMEI) of
-        {ok, #{ip := IP}} ->
-            Port = dmd_config:get(dmd_mgmt, wme_port, 9998),
+        {ok, #{ip := IP, port := Port}} ->
             wme_client:read_config(IP, Port, wme_option(Object), 30000);
         {error, not_found} ->
             {error, device_not_found}

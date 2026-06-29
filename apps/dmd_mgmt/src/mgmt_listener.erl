@@ -78,12 +78,19 @@ handle_conn(Sock) ->
     dmd_transport:close(Sock).
 
 %% On each CALL, the server polls the device by issuing a STAT back to it
-%% (asynchronously, so the CALL response is not delayed). Gated by config.
+%% (asynchronously, so the CALL response is not delayed). Gated by config, and
+%% only for wmr (type 1) devices — wme devices have no text command listener.
 maybe_stat_on_call(IMEI) ->
-    case dmd_config:get(dmd_mgmt, stat_on_call, true) of
+    case dmd_config:get(dmd_mgmt, stat_on_call, true) andalso is_wmr(IMEI) of
         true ->
             dmd_metrics:incr(dmd_mgmt, call_triggered_stat),
             mgmt_commander:send_async(IMEI, stat, on_call);
         false ->
             ok
+    end.
+
+is_wmr(IMEI) ->
+    case mgmt_registry:lookup(IMEI) of
+        {ok, #{device_type := Type}} -> Type =:= 1;
+        _ -> true
     end.

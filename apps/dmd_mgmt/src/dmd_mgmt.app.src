@@ -8,7 +8,6 @@
     {csv_file, "config/devices.csv"},
     {mgmt_host, {127,0,0,1}},
     {mgmt_port, 5000},
-    {wme_port, 9998},
     {log_file, "log/mgmt.log"},
     {stat_on_call, true},
     {driver_enabled, true},

@@ -4,7 +4,7 @@
 -module(mgmt_registry).
 -behaviour(gen_server).
 
--export([start_link/0, register/4, touch/3, unregister/1, lookup/1, all/0]).
+-export([start_link/0, register/2, touch/3, unregister/1, lookup/1, all/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2]).
 
 -define(TAB, dmd_mgmt_registry).
@@ -12,9 +12,10 @@
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
--spec register(binary(), inet:ip_address(), inet:port_number(), atom()) -> ok.
-register(IMEI, IP, Port, Status) ->
-    gen_server:call(?MODULE, {register, IMEI, IP, Port, Status}).
+%% Register/merge a device's info (a dmd_csv:row() plus e.g. status).
+-spec register(binary(), map()) -> ok.
+register(IMEI, Info) when is_map(Info) ->
+    gen_server:call(?MODULE, {register, IMEI, Info}).
 
 -spec touch(binary(), binary(), atom()) -> ok.
 touch(IMEI, ReportedIP, Status) ->
@@ -38,12 +39,12 @@ init([]) ->
     ?TAB = ets:new(?TAB, [named_table, set, protected, {read_concurrency, true}]),
     {ok, #{}}.
 
-handle_call({register, IMEI, IP, Port, Status}, _From, S) ->
+handle_call({register, IMEI, Info}, _From, S) ->
     Existing = case ets:lookup(?TAB, IMEI) of
                    [{_, M}] -> M;
                    [] -> #{calls => 0}
                end,
-    Map = Existing#{imei => IMEI, ip => IP, port => Port, status => Status},
+    Map = maps:merge(Existing, Info#{imei => IMEI}),
     ets:insert(?TAB, {IMEI, Map}),
     {reply, ok, S};
 handle_call({unregister, IMEI}, _From, S) ->
@@ -60,9 +61,11 @@ handle_cast({touch, IMEI, ReportedIP, Status}, S) ->
                         calls => maps:get(calls, Map, 0) + 1},
             ets:insert(?TAB, {IMEI, Map1});
         [] ->
-            %% A device not in the inventory; derive a connect address.
+            %% A device not in the inventory; derive a connect address and
+            %% assume the wmr device type.
             Map = #{imei => IMEI, ip => parse_ip(ReportedIP),
                     port => dmd_config:get(dmd_mgmt, device_port, 6000),
+                    device_type => 1,
                     reported_ip => ReportedIP, status => Status,
                     last_seen => now_s(), calls => 1},
             ets:insert(?TAB, {IMEI, Map})

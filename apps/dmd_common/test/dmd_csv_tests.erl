@@ -1,42 +1,50 @@
-%%% @doc EUnit tests for the device inventory CSV.
+%%% @doc EUnit tests for the device inventory CSV (11-column format).
 -module(dmd_csv_tests).
 -include_lib("eunit/include/eunit.hrl").
 
-generate_test() ->
-    Rows = dmd_csv:generate(10, 101000000000001, 2, 6000, 10),
-    ?assertEqual(10, length(Rows)),
+generate_mix_test() ->
+    Rows = dmd_csv:generate(3, 2, #{start_imei => 1, base_ip => {127,10,0,1},
+                                    mgmt_port => 444, period_sec => 30}),
+    ?assertEqual(5, length(Rows)),
+    Types = [maps:get(device_type, R) || R <- Rows],
+    ?assertEqual([1,1,1,2,2], Types),
     [First | _] = Rows,
-    ?assertMatch(#{imei := <<"101000000000001">>, ip := {127,0,0,2},
-                   port := 6000, callperiod_ms := 10000}, First),
-    Last = lists:last(Rows),
-    ?assertMatch(#{imei := <<"101000000000010">>, ip := {127,0,0,11}}, Last).
-
-generate_scale_test() ->
-    Rows = dmd_csv:generate_scale(10000, 101000000000001, 6000, 10),
-    ?assertEqual(10000, length(Rows)),
+    ?assertMatch(#{imei := <<"000000000000001">>, ip := {127,10,0,1},
+                   port := 444, ssh_port := 22, device_type := 1, tls := false,
+                   period_ms := 30000, login_name := <<"root">>,
+                   login_pass := <<"admin">>, group := <<"Group-1">>}, First),
+    %% Distinct IPs across the fleet.
     IPs = [maps:get(ip, R) || R <- Rows],
-    %% Every device gets a distinct, in-range loopback IP.
+    ?assertEqual(5, length(lists:usort(IPs))).
+
+scale_distinct_ip_test() ->
+    Rows = dmd_csv:generate_scale(6000, 4000, 10),
+    ?assertEqual(10000, length(Rows)),
+    ?assertEqual(6000, length([R || R <- Rows, maps:get(device_type, R) =:= 1])),
+    ?assertEqual(4000, length([R || R <- Rows, maps:get(device_type, R) =:= 2])),
+    IPs = [maps:get(ip, R) || R <- Rows],
     ?assertEqual(10000, length(lists:usort(IPs))),
-    ?assert(lists:all(fun({127, _, _, _}) -> true; (_) -> false end, IPs)),
-    ?assertEqual({127,0,0,2}, dmd_csv:index_ip(2)),
-    ?assertEqual({127,0,1,0}, dmd_csv:index_ip(256)).
+    ?assert(lists:all(fun({127, _, _, _}) -> true; (_) -> false end, IPs)).
 
 round_trip_test() ->
-    Rows = dmd_csv:generate(3, 101000000000001, 2, 6000, 10),
+    Rows = dmd_csv:generate(2, 1, #{start_imei => 101000000000001,
+                                    mgmt_port => 6060, period_sec => 5}),
     Path = filename:join(tmp_dir(), "devices_rt.csv"),
     ok = dmd_csv:write(Path, Rows),
     ?assertEqual({ok, Rows}, dmd_csv:read(Path)).
 
-parse_skips_header_and_comments_test() ->
-    Path = filename:join(tmp_dir(), "devices_hc.csv"),
-    Content = <<"imei,ip,port,callperiod\n",
-                "# a comment\n",
-                "\n",
-                "101000000000001,127.0.0.2,6000,10\n">>,
+parse_example_test() ->
+    Path = filename:join(tmp_dir(), "devices_ex.csv"),
+    Content = <<"IMEI,IP,MgmtPort,PortSSH,DeviceType,TLSEnable,Reptime,"
+                "LoginName,LoginPass,EquipmentGroup,Comments\n",
+                "000000000000001,127.10.0.1,444,22,1,1,30,root,admin,Group-1,\n",
+                "000000000000002,127.10.0.2,444,22,2,1,30,root,admin,Group-1,hi\n">>,
     ok = file:write_file(Path, Content),
-    {ok, [Row]} = dmd_csv:read(Path),
-    ?assertMatch(#{imei := <<"101000000000001">>, ip := {127,0,0,2},
-                   port := 6000, callperiod_ms := 10000}, Row).
+    {ok, [R1, R2]} = dmd_csv:read(Path),
+    ?assertMatch(#{imei := <<"000000000000001">>, ip := {127,10,0,1},
+                   port := 444, device_type := 1, tls := true,
+                   period_ms := 30000, comments := <<>>}, R1),
+    ?assertMatch(#{device_type := 2, comments := <<"hi">>}, R2).
 
 tmp_dir() ->
     Dir = filename:join("/tmp", "dmd_csv_test"),

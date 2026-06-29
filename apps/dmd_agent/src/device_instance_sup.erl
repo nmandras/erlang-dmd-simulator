@@ -5,31 +5,30 @@
 -module(device_instance_sup).
 -behaviour(supervisor).
 
--export([start_link/4, init/1, agent_pid/1]).
+-export([start_link/1, init/1, agent_pid/1]).
 
-start_link(IMEI, IP, Port, PeriodMs) ->
-    supervisor:start_link(?MODULE, [IMEI, IP, Port, PeriodMs]).
+start_link(Spec) ->
+    supervisor:start_link(?MODULE, [Spec]).
 
-init([IMEI, IP, Port, PeriodMs]) ->
+%% Every device runs the CALL client (device_agent); the inbound listener is
+%% chosen by DeviceType: 1 = wmr text protocol, 2 = WM-E protocol.
+init([#{imei := IMEI, ip := IP, port := Port,
+        period_ms := PeriodMs, device_type := DType}]) ->
     SupFlags = #{strategy => one_for_all, intensity => 5, period => 10},
     Children = [
         %% Agent first so it is up before the listener serves commands.
         #{id => agent,
           start => {device_agent, start_link, [IMEI, IP, Port, PeriodMs]}},
-        #{id => listener,
-          start => {device_listener, start_link, [self(), IMEI, IP, Port]}}
-    ] ++ wme_children(IMEI, IP),
+        listener_child(DType, self(), IMEI, IP, Port)
+    ],
     {ok, {SupFlags, Children}}.
 
-%% Optional WM-E (config-read) listener on the device's IP:wme_port.
-wme_children(IMEI, IP) ->
-    case dmd_config:get(dmd_agent, wme_enabled, true) of
-        true ->
-            [#{id => wme_listener,
-               start => {device_wme_listener, start_link, [IMEI, IP]}}];
-        false ->
-            []
-    end.
+listener_child(2, _Sup, IMEI, IP, Port) ->
+    #{id => wme_listener,
+      start => {device_wme_listener, start_link, [IMEI, IP, Port]}};
+listener_child(_Wmr, Sup, IMEI, IP, Port) ->
+    #{id => listener,
+      start => {device_listener, start_link, [Sup, IMEI, IP, Port]}}.
 
 %% Resolve the agent pid of a device subtree. Must be called *after* init
 %% completes (e.g. from a connection handler), never from a child's init,

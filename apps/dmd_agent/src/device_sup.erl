@@ -6,7 +6,7 @@
 -module(device_sup).
 -behaviour(supervisor).
 
--export([start_link/0, init/1, start_device/4, stop_device/1, count/0]).
+-export([start_link/0, init/1, start_device/1, stop_device/1, count/0]).
 
 -define(TAB, dmd_agent_devices).
 
@@ -25,14 +25,14 @@ init([]) ->
               type => supervisor},
     {ok, {SupFlags, [Child]}}.
 
--spec start_device(binary(), inet:ip_address(), inet:port_number(),
-                   non_neg_integer()) -> {ok, pid()} | {error, term()}.
-start_device(IMEI, IP, Port, PeriodMs) ->
+%% Spec is a dmd_csv:row() (imei, ip, port, period_ms, device_type, ...).
+-spec start_device(map()) -> {ok, pid()} | {error, term()}.
+start_device(#{imei := IMEI} = Spec) ->
     case ets:member(?TAB, IMEI) of
         true ->
             {error, already_started};
         false ->
-            case supervisor:start_child(?MODULE, [IMEI, IP, Port, PeriodMs]) of
+            case supervisor:start_child(?MODULE, [Spec]) of
                 {ok, Pid} ->
                     ets:insert(?TAB, {IMEI, Pid}),
                     {ok, Pid};

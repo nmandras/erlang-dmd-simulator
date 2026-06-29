@@ -35,7 +35,10 @@ init_per_suite(Config) ->
 
 start_apps(Config, Priv, Cert, Key) ->
     Csv = filename:join(Priv, "devices.csv"),
-    ok = dmd_csv:write(Csv, dmd_csv:generate(2, 101000000000001, 41, 6070, 1)),
+    ok = dmd_csv:write(Csv, dmd_csv:generate(2, 0, #{start_imei => 101000000000001,
+                                                     base_ip => {127,10,0,41},
+                                                     mgmt_port => 6070,
+                                                     period_sec => 1})),
     Tls = [{listen,  [{certfile, Cert}, {keyfile, Key}]},
            {connect, [{verify, verify_none}]}],
     application:load(dmd_agent),
