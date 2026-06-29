@@ -1,0 +1,48 @@
+# Run the simulator plus a packet-capture sidecar.
+#
+#   docker compose up --build
+#
+# The `dmd` service runs both apps (agent + management server) in one node, so
+# all agent<->server traffic flows over that container's loopback. The `sniffer`
+# service shares dmd's network namespace (network_mode: service:dmd) and runs
+# tcpdump on lo, writing ./caps/dmd.pcap on the host — open it in Wireshark.
+#
+# To run the scale benchmark instead of the steady fleet:
+#   docker compose run --rm dmd ./scripts/scale_run.sh 8000 2000 60 10
+services:
+  dmd:
+    build: .
+    container_name: dmd
+    init: true
+    command: ["./scripts/run_node.sh"]
+    ulimits:
+      nofile:
+        soft: 1048576
+        hard: 1048576
+    sysctls:
+      # Sustains many short-lived connections at scale (optional; remove if your
+      # Docker/kernel rejects these namespaced sysctls).
+      net.ipv4.ip_local_port_range: "1024 65535"
+      net.ipv4.tcp_tw_reuse: "1"
+    volumes:
+      - ./log:/app/log
+
+  sniffer:
+    image: nicolaka/netshoot
+    container_name: dmd-sniffer
+    # Share dmd's network namespace so tcpdump on `lo` sees the loopback traffic
+    # between the agent and the management server.
+    network_mode: "service:dmd"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    depends_on:
+      - dmd
+    volumes:
+      - ./caps:/caps
+    # 5000 = CALL ingestion (device -> server); 6000 = device MgmtPort
+    # (server -> device STAT/SECLOG/WME). Adjust to your config/devices.csv.
+    command: >
+      tcpdump -i lo -n -U -s 0
+      -w /caps/dmd.pcap
+      "tcp port 5000 or tcp port 6000"

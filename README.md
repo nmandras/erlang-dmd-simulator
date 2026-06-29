@@ -238,6 +238,35 @@ limit yourself first:
 ulimit -n 1048576 && ./scripts/scale_run.sh 8000 2000 40 10
 ```
 
+## Monitoring traffic
+
+Each device has its own `127.x` loopback IP and the server connects back to it,
+so the agent and the server must share one network namespace (same container)
+and **all their traffic is loopback traffic** — it never reaches the host's
+interfaces or the docker bridge, and splitting them into two compose services
+would break the `server → device 127.x` direction.
+
+To watch it "from outside", `docker-compose.yml` runs a **tcpdump sidecar** that
+shares the app container's network namespace and captures `lo`:
+
+```sh
+docker compose up --build          # starts the fleet + the sniffer
+# ... traffic flows; capture is written to ./caps/dmd.pcap on the host
+docker compose down
+wireshark caps/dmd.pcap            # open the capture
+```
+
+The sidecar (`nicolaka/netshoot`, `network_mode: service:dmd`, `NET_RAW`) runs
+`tcpdump -i lo -w /caps/dmd.pcap "tcp port 5000 or tcp port 6000"` — port 5000 is
+CALL ingestion (device→server), port 6000 is the device `MgmtPort`
+(server→device STAT/SECLOG/WME). Adjust the ports to match `config/devices.csv`.
+
+Other options:
+- **Live, no capture:** `docker compose logs -f` — `log/agent.log` and
+  `log/mgmt.log` already record every CALL/STAT/SECLOG/WME event, timestamped.
+- **Ad hoc inside the container:** `docker compose exec sniffer tcpdump -i lo -A
+  'tcp port 5000'` to print frames live (the app image itself has no tcpdump).
+
 ## Run it
 
 ```sh

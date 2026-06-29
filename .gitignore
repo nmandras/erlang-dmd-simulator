@@ -8,3 +8,5 @@ erl_crash.dump
 /priv/certs/*.key
 /log/*_scale.log
 /log/devices_scale.csv
+
+/caps/*.pcap
