@@ -30,15 +30,35 @@ least-significant byte first**, then the payload.
 | server → agent   | `STAT`                               |
 | server → agent   | `REBOOT`                             |
 
-**Responses** — every request is answered with the command name, a result code
+**Responses** — most requests are answered with the command name, a result code
 (`0` success, `1` failure) and optional data after a comma:
 
-| Example                        | Meaning                              |
-|--------------------------------|--------------------------------------|
-| `CALL:0`                       | CALL accepted                        |
-| `REBOOT:0`                     | reboot acknowledged                  |
-| `STAT:0,imei=…;state=running…` | status, with payload                 |
-| `STAT:1,rebooting`             | failed (device is rebooting)         |
+| Example              | Meaning                              |
+|----------------------|--------------------------------------|
+| `CALL:0`             | CALL accepted                        |
+| `REBOOT:0`           | reboot acknowledged                  |
+| `STAT:1,rebooting`   | command failed (device is rebooting) |
+
+A successful `STAT` replies with a rich, modem-style status dump instead of a
+numeric code (the `STAT:` tag introduces it, alongside the `RTC:`, `UPTIME:` and
+`SECSTAT:` tags). Radio parameters (RSSI/SINR/RSRQ/RSRP) are randomised within
+typical LTE ranges, `RTC` is the current system time and `UPTIME` is the
+device's uptime in seconds:
+
+```
+STAT:smp.firmware_version = 5.3.61.0
+smp.os_version = EC200A ... RSSI=-86 TXPWR=0 CID=71937 SINR=5 ECIO=0 RSRQ=-5 RSRP=-89
+smp.modem_imei = 101000000000001, ICC = 8936200000550566520F
+smp.vendor = WM Systems LLC.
+smp.battery = 4200, CAPACITY = 100
+...
+RTC:2026-06-29T17:40:45+00:00
+UPTIME:1.00
+SECSTAT:1
+```
+
+The management side decodes this as `{<<"STAT">>, 0, <body>}` — a non-numeric
+payload is treated as success (code 0).
 
 ## Device inventory CSV
 

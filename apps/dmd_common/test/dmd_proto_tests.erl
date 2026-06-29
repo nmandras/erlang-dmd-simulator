@@ -29,6 +29,20 @@ response_round_trip_test() ->
     ?assertEqual({<<"STAT">>, 0, <<"imei=1">>},
                  dmd_proto:decode_response(<<"STAT:0,imei=1">>)).
 
+%% A rich STAT body (no numeric code) decodes as success with the whole body.
+rich_stat_response_test() ->
+    Rich = <<"STAT:smp.firmware_version = 5.3.61.0\n"
+             "smp.battery = 4200, CAPACITY = 100\n"
+             "RTC:2026-06-29T17:22:50+00:00\nUPTIME:516.00\nSECSTAT:1">>,
+    {Name, Code, Body} = dmd_proto:decode_response(Rich),
+    ?assertEqual(<<"STAT">>, Name),
+    ?assertEqual(0, Code),
+    ?assertEqual(match, case binary:match(Body, <<"smp.firmware_version">>) of
+                            nomatch -> nomatch; _ -> match end),
+    %% A rebooting device still reports a numeric failure code.
+    ?assertEqual({<<"STAT">>, 1, <<"rebooting">>},
+                 dmd_proto:decode_response(<<"STAT:1,rebooting">>)).
+
 valid_imei_test() ->
     ?assert(dmd_proto:valid_imei(<<"101000000000001">>)),
     ?assertNot(dmd_proto:valid_imei(<<"12345">>)),

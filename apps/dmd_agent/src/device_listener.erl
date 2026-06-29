@@ -58,8 +58,7 @@ handle_conn(Sock, Sup) ->
     case dmd_proto:read_msg(Sock, ?RECV_TIMEOUT) of
         {ok, Payload} ->
             Cmd = to_command(dmd_proto:decode_request(Payload)),
-            {Code, Data} = dispatch(Sup, Cmd),
-            Resp = dmd_proto:encode_response(resp_name(Cmd), Code, Data),
+            {_Code, Resp} = dispatch(Sup, Cmd),
             _ = dmd_proto:write_msg(Sock, Resp);
         {error, _} ->
             ok
@@ -71,21 +70,15 @@ to_command({command, Cmd}) -> Cmd;
 to_command({call, _, _}) -> {unknown, <<"CALL">>};
 to_command({error, _}) -> {unknown, <<>>}.
 
+%% Returns {Code, Payload}; the handlers build the full response bytes.
 dispatch(Sup, Cmd) ->
     case device_instance_sup:agent_pid(Sup) of
         undefined ->
-            {1, <<"no-agent">>};
+            {1, dmd_proto:encode_response(<<"ERR">>, 1, <<"no-agent">>)};
         Pid ->
             try device_agent:handle_command(Pid, Cmd) of
-                {Code, Data} -> {Code, Data}
+                {Code, Payload} -> {Code, Payload}
             catch
-                _:_ -> {1, <<"error">>}
+                _:_ -> {1, dmd_proto:encode_response(<<"ERR">>, 1, <<"error">>)}
             end
     end.
-
-resp_name(stat) -> stat;
-resp_name(reboot) -> reboot;
-resp_name({config, _}) -> <<"CONFIG">>;
-resp_name({firmware, _}) -> <<"FIRMWARE">>;
-resp_name(seclogs) -> <<"SECLOGS">>;
-resp_name({unknown, _}) -> <<"ERR">>.

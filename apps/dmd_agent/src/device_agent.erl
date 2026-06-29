@@ -11,7 +11,7 @@
 -module(device_agent).
 -behaviour(gen_statem).
 
--export([start_link/4, handle_command/2, status_line/1]).
+-export([start_link/4, handle_command/2]).
 -export([init/1, callback_mode/0, terminate/3]).
 -export([running/3, rebooting/3]).
 
@@ -23,17 +23,11 @@ start_link(IMEI, IP, Port, PeriodMs) ->
 
 callback_mode() -> state_functions.
 
+%% Returns `{Code, Payload}': Code for the device's own logging, Payload is the
+%% exact response bytes the gateway/listener sends back to the server.
 -spec handle_command(pid(), term()) -> {device_cmd:code(), binary()}.
 handle_command(Pid, Cmd) ->
     gen_statem:call(Pid, {command, Cmd}).
-
--spec status_line(map()) -> binary().
-status_line(#{imei := IMEI, fw := Fw, config_ver := Cv,
-              boot_time := Bt, state := State}) ->
-    Uptime = erlang:system_time(second) - Bt,
-    iolist_to_binary(
-      io_lib:format("imei=~s;state=~s;uptime=~bs;fw=~s;cfg=~b",
-                    [IMEI, State, Uptime, Fw, Cv])).
 
 init([IMEI, IP, Port, PeriodMs]) ->
     Data = #{imei => IMEI, ip => IP, port => Port, period_ms => PeriodMs,
@@ -76,7 +70,8 @@ rebooting(state_timeout, boot_done, Data) ->
     {next_state, running, Data1, [{state_timeout, ?FIRST_CALL_DELAY, send_call}]};
 rebooting({call, From}, {command, Cmd}, Data) ->
     log_command(Data, Cmd, 1),
-    {keep_state, Data, [{reply, From, {1, <<"rebooting">>}}]};
+    Payload = dmd_proto:encode_response(dmd_proto:command_tag(Cmd), 1, <<"rebooting">>),
+    {keep_state, Data, [{reply, From, {1, Payload}}]};
 rebooting(EventType, EventContent, Data) ->
     handle_common(EventType, EventContent, Data).
 
