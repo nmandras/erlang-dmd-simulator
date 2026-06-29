@@ -64,9 +64,16 @@ stat_payload(#{imei := IMEI, boot_time := Bt}) ->
         <<"crl.validity = 0000-00-00 00:00:00;0000-00-00 00:00:00">>,
         <<"RTC:", (rtc_now())/binary>>,
         iolist_to_binary(io_lib:format("UPTIME:~.2f", [float(Uptime)])),
-        <<"SECSTAT:1">>
+        secstat_line()
     ],
     iolist_to_binary(lists:join(<<"\n">>, Lines)).
+
+%% SECSTAT is 1 (security events pending) with the configured probability,
+%% otherwise 0. The server uses SECSTAT:1 to decide whether to fetch SECLOG.
+secstat_line() ->
+    P = dmd_config:get(dmd_agent, secstat_probability, 1.0),
+    Value = case rand:uniform() =< P of true -> 1; false -> 0 end,
+    <<"SECSTAT:", (integer_to_binary(Value))/binary>>.
 
 %%====================================================================
 %% SECLOG response

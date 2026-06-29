@@ -69,10 +69,11 @@ SECLOG:<188>Jun 29 18:00:32 WM-E1S sec[21749]: certificate validation succeeded
 <34>Jun 29 18:00:32 WM-E1S tamper[4021]: enclosure cover opened
 ```
 
-**STAT → SECLOG chain:** because each STAT body ends with `SECSTAT:1`, when the
-server's on-CALL STAT completes it immediately follows up with a `SECLOG` to
-fetch the device's security events. The chain shows in `log/mgmt.log` as
-`cmd=stat reason=on_call` then `cmd=seclog reason=secstat`.
+**STAT → SECLOG chain:** a STAT body ends with `SECSTAT:1` with probability
+`secstat_probability` (default `1.0`), otherwise `SECSTAT:0`. When the server's
+on-CALL STAT completes and reports `SECSTAT:1`, it immediately follows up with a
+`SECLOG` to fetch the device's security events. The chain shows in
+`log/mgmt.log` as `cmd=stat reason=on_call` then `cmd=seclog reason=secstat`.
 
 ## Device inventory CSV
 
@@ -244,8 +245,9 @@ with `listen` (`certfile`/`keyfile`) and `connect` options. For a real CA use
 
 Per-application `dmd_agent` / `dmd_mgmt` env keys (see `config/sys.config`):
 `csv_file`, `mgmt_host`, `mgmt_port`, `log_file`, `tls`, `tls_opts`;
-agent-only `call_dispatch` (`spread` | `burst`) and `reboot_duration_ms`;
-server-only `stat_on_call`, `driver_enabled`, `driver_min_ms`, `driver_max_ms`.
+agent-only `call_dispatch` (`spread` | `burst`), `secstat_probability`
+(`0.0`..`1.0`) and `reboot_duration_ms`; server-only `stat_on_call`,
+`driver_enabled`, `driver_min_ms`, `driver_max_ms`.
 
 `call_dispatch` controls how the fleet times its periodic CALLs: `spread`
 (default) gives each device a random offset within the period so calls are

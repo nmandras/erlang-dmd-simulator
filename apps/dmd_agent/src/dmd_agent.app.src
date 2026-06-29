@@ -9,6 +9,7 @@
     {mgmt_host, {127,0,0,1}},
     {mgmt_port, 5000},
     {call_dispatch, spread},
+    {secstat_probability, 1.0},
     {reboot_duration_ms, 5000},
     {log_file, "log/agent.log"},
     {tls, false},
