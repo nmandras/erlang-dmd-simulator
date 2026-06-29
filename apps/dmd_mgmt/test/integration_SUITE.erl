@@ -7,12 +7,14 @@
 
 -export([all/0, init_per_suite/1, end_per_suite/1]).
 -export([calls_logged/1, command_works/1, reboot_command/1, driver_runs/1,
-         unknown_device/1, metrics_collected/1, call_triggers_stat/1]).
+         unknown_device/1, metrics_collected/1, call_triggers_stat/1,
+         seclog_command/1, stat_triggers_seclog/1]).
 
 -define(MGMT_PORT, 5055).
 
 all() ->
-    [calls_logged, command_works, reboot_command, call_triggers_stat,
+    [calls_logged, command_works, reboot_command, seclog_command,
+     call_triggers_stat, stat_triggers_seclog,
      driver_runs, unknown_device, metrics_collected].
 
 init_per_suite(Config) ->
@@ -84,6 +86,27 @@ driver_runs(Config) ->
 unknown_device(_Config) ->
     ?assertEqual({error, device_not_found},
                  dmd_mgmt:send_command(<<"999999999999999">>, stat)),
+    ok.
+
+%% SECLOG returns 1..5 syslog-format security event lines.
+seclog_command(_Config) ->
+    IMEI = <<"101000000000001">>,
+    {ok, {<<"SECLOG">>, 0, Body}} = dmd_mgmt:send_command(IMEI, seclog),
+    ?assert(byte_size(Body) > 0),
+    Lines = binary:split(Body, <<"\n">>, [global]),
+    ?assert(length(Lines) >= 1 andalso length(Lines) =< 5),
+    ok.
+
+%% A STAT carrying SECSTAT:1 makes the server follow up with a SECLOG; the
+%% on-CALL STAT path exercises this, so the seclog_triggered metric rises and
+%% both logs show the seclog command.
+stat_triggers_seclog(Config) ->
+    ok = wait_until(fun() ->
+        #{counters := C} = dmd_metrics:snapshot(dmd_mgmt),
+        maps:get(seclog_triggered, C, 0) > 0
+    end, 100),
+    ok = wait_file(?config(mgmt_log, Config), <<"cmd=seclog">>),
+    ok = wait_file(?config(agent_log, Config), <<"cmd=seclog">>),
     ok.
 
 %% Each received CALL makes the server poll the caller with a STAT, which the

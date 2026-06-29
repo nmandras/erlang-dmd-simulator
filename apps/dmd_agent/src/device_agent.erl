@@ -34,7 +34,17 @@ init([IMEI, IP, Port, PeriodMs]) ->
              fw => <<"1.0.0">>, config_ver => 1,
              boot_time => erlang:system_time(second),
              state => running},
-    {ok, running, Data, [{state_timeout, ?FIRST_CALL_DELAY, send_call}]}.
+    {ok, running, Data, [{state_timeout, first_call_delay(PeriodMs), send_call}]}.
+
+%% Delay before the first CALL, per the configured dispatch strategy:
+%%   spread (default) - a random offset across the period, so a large fleet's
+%%                      calls are spread evenly instead of arriving together;
+%%   burst            - a fixed short delay, so all devices call in step.
+first_call_delay(PeriodMs) ->
+    case dmd_config:get(dmd_agent, call_dispatch, spread) of
+        burst -> min(?FIRST_CALL_DELAY, PeriodMs);
+        _spread -> rand:uniform(max(1, PeriodMs))
+    end.
 
 %%====================================================================
 %% running
@@ -67,7 +77,8 @@ running(EventType, EventContent, Data) ->
 rebooting(state_timeout, boot_done, Data) ->
     logger:info("BOOT imei=~s back online", [maps:get(imei, Data)], ?DOMAIN),
     Data1 = Data#{state => running, boot_time => erlang:system_time(second)},
-    {next_state, running, Data1, [{state_timeout, ?FIRST_CALL_DELAY, send_call}]};
+    {next_state, running, Data1,
+     [{state_timeout, first_call_delay(maps:get(period_ms, Data)), send_call}]};
 rebooting({call, From}, {command, Cmd}, Data) ->
     log_command(Data, Cmd, 1),
     Payload = dmd_proto:encode_response(dmd_proto:command_tag(Cmd), 1, <<"rebooting">>),

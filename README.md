@@ -29,6 +29,7 @@ least-significant byte first**, then the payload.
 | agent → server   | `CALL:<15-digit-IMEI>,<own-ip>`      |
 | server → agent   | `STAT`                               |
 | server → agent   | `REBOOT`                             |
+| server → agent   | `SECLOG`                             |
 
 **Responses** — most requests are answered with the command name, a result code
 (`0` success, `1` failure) and optional data after a comma:
@@ -59,6 +60,19 @@ SECSTAT:1
 
 The management side decodes this as `{<<"STAT">>, 0, <body>}` — a non-numeric
 payload is treated as success (code 0).
+
+A `SECLOG` request returns 1–5 randomly generated syslog (RFC3164-style)
+security-event lines, joined by newlines under a `SECLOG:` tag:
+
+```
+SECLOG:<188>Jun 29 18:00:32 WM-E1S sec[21749]: certificate validation succeeded
+<34>Jun 29 18:00:32 WM-E1S tamper[4021]: enclosure cover opened
+```
+
+**STAT → SECLOG chain:** because each STAT body ends with `SECSTAT:1`, when the
+server's on-CALL STAT completes it immediately follows up with a `SECLOG` to
+fetch the device's security events. The chain shows in `log/mgmt.log` as
+`cmd=stat reason=on_call` then `cmd=seclog reason=secstat`.
 
 ## Device inventory CSV
 
@@ -230,5 +244,10 @@ with `listen` (`certfile`/`keyfile`) and `connect` options. For a real CA use
 
 Per-application `dmd_agent` / `dmd_mgmt` env keys (see `config/sys.config`):
 `csv_file`, `mgmt_host`, `mgmt_port`, `log_file`, `tls`, `tls_opts`;
-agent-only `reboot_duration_ms`; server-only `stat_on_call`, `driver_enabled`,
-`driver_min_ms`, `driver_max_ms`.
+agent-only `call_dispatch` (`spread` | `burst`) and `reboot_duration_ms`;
+server-only `stat_on_call`, `driver_enabled`, `driver_min_ms`, `driver_max_ms`.
+
+`call_dispatch` controls how the fleet times its periodic CALLs: `spread`
+(default) gives each device a random offset within the period so calls are
+distributed evenly, while `burst` makes all devices call in step ("all at
+once").

@@ -1,148 +1,207 @@
-2026-06-28 09:46:07.260031+00:00 info management server listening on port 5000
-2026-06-28 09:46:07.265693+00:00 info inventory loaded from config/devices.csv: 10 device(s)
-2026-06-28 09:46:07.772720+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
-2026-06-28 09:46:07.774537+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
-2026-06-28 09:46:07.774527+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
-2026-06-28 09:46:07.775511+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:07.775722+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
-2026-06-28 09:46:07.775817+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
-2026-06-28 09:46:07.776291+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:07.776404+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:07.776810+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
-2026-06-28 09:46:07.776941+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
-2026-06-28 09:46:07.777019+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
-2026-06-28 09:46:07.777890+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
-2026-06-28 09:46:07.777934+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
-2026-06-28 09:46:07.778793+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:07.778960+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:07.779203+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:07.779355+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:07.779429+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:07.779615+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:07.779621+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:10.863114+00:00 info DRIVER cmd=stat imei=101000000000006 result={<<"STAT">>,0}
-2026-06-28 09:46:17.774958+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
-2026-06-28 09:46:17.775805+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:17.776261+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
-2026-06-28 09:46:17.776299+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
-2026-06-28 09:46:17.777316+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
-2026-06-28 09:46:17.777409+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:17.777352+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:17.778063+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:17.778120+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
-2026-06-28 09:46:17.778227+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
-2026-06-28 09:46:17.779093+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
-2026-06-28 09:46:17.779232+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:17.779385+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:17.779719+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:17.780359+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
-2026-06-28 09:46:17.780890+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
-2026-06-28 09:46:17.781072+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
-2026-06-28 09:46:17.781476+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:17.781983+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:17.782077+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:17.929217+00:00 info DRIVER cmd=stat imei=101000000000007 result={<<"STAT">>,0}
-2026-06-28 09:46:21.785086+00:00 info DRIVER cmd=stat imei=101000000000008 result={<<"STAT">>,0}
-2026-06-28 09:46:27.776626+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
-2026-06-28 09:46:27.777296+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
-2026-06-28 09:46:27.777598+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:27.778332+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
-2026-06-28 09:46:27.778564+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
-2026-06-28 09:46:27.778607+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:27.779432+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
-2026-06-28 09:46:27.779481+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:27.779621+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:27.780307+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:27.780432+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
-2026-06-28 09:46:27.780491+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
-2026-06-28 09:46:27.781399+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:27.781387+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:27.781529+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
-2026-06-28 09:46:27.782358+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
-2026-06-28 09:46:27.782863+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
-2026-06-28 09:46:27.782865+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:27.783104+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:27.783616+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:28.603143+00:00 info DRIVER cmd=stat imei=101000000000005 result={<<"STAT">>,0}
-2026-06-28 09:46:36.456733+00:00 info DRIVER cmd=stat imei=101000000000008 result={<<"STAT">>,0}
-2026-06-28 09:46:37.779025+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
-2026-06-28 09:46:37.779141+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
-2026-06-28 09:46:37.780470+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
-2026-06-28 09:46:37.780556+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:37.781039+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
-2026-06-28 09:46:37.781362+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
-2026-06-28 09:46:37.782479+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
-2026-06-28 09:46:37.782615+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:37.782728+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:37.782980+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
-2026-06-28 09:46:37.782953+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
-2026-06-28 09:46:37.783346+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:37.784381+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:37.784597+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
-2026-06-28 09:46:37.784674+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:37.785204+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
-2026-06-28 09:46:37.785299+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:37.785489+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:37.785870+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:37.786119+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:41.248279+00:00 info DRIVER cmd=reboot imei=101000000000007 result={<<"REBOOT">>,0}
-2026-06-28 09:46:44.296356+00:00 info DRIVER cmd=reboot imei=101000000000008 result={<<"REBOOT">>,0}
-2026-06-28 09:46:46.751102+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
-2026-06-28 09:46:46.752223+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:47.643269+00:00 info DRIVER cmd=stat imei=101000000000008 result={<<"STAT">>,1}
-2026-06-28 09:46:47.780821+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
-2026-06-28 09:46:47.781634+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
-2026-06-28 09:46:47.782088+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:47.782557+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
-2026-06-28 09:46:47.782789+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:47.783386+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
-2026-06-28 09:46:47.783454+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
-2026-06-28 09:46:47.783643+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
-2026-06-28 09:46:47.783870+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:47.784728+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:47.785120+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:47.784593+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:47.785322+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
-2026-06-28 09:46:47.786236+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
-2026-06-28 09:46:47.786302+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:47.786863+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:49.798907+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
-2026-06-28 09:46:49.799810+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:52.376318+00:00 info DRIVER cmd=stat imei=101000000000001 result={<<"STAT">>,0}
-2026-06-28 09:46:56.597696+00:00 info DRIVER cmd=stat imei=101000000000004 result={<<"STAT">>,0}
-2026-06-28 09:46:56.754048+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
-2026-06-28 09:46:56.755012+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:57.782773+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
-2026-06-28 09:46:57.783379+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
-2026-06-28 09:46:57.784031+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:57.784118+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:57.784389+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
-2026-06-28 09:46:57.785219+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:57.785280+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
-2026-06-28 09:46:57.785354+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
-2026-06-28 09:46:57.785294+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
-2026-06-28 09:46:57.786402+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:57.786456+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:57.786652+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:57.787441+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
-2026-06-28 09:46:57.787500+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
-2026-06-28 09:46:57.788540+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:57.788603+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:59.800572+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
-2026-06-28 09:46:59.801546+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:46:59.970274+00:00 info DRIVER cmd=stat imei=101000000000005 result={<<"STAT">>,0}
-2026-06-28 09:47:04.153234+00:00 info DRIVER cmd=stat imei=101000000000003 result={<<"STAT">>,0}
-2026-06-28 09:47:06.755830+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
-2026-06-28 09:47:06.756568+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
-2026-06-28 09:47:07.284082+00:00 info ==================== dmd_mgmt metrics (uptime 60s) ====================
-2026-06-28 09:47:07.284181+00:00 info counters:
-2026-06-28 09:47:07.284258+00:00 info call_triggered_stat         61 |########################################
-2026-06-28 09:47:07.284331+00:00 info calls_received              61 |########################################
-2026-06-28 09:47:07.284372+00:00 info driver_failed                1 |#
-2026-06-28 09:47:07.284529+00:00 info driver_ok                   11 |#######
-2026-06-28 09:47:07.284604+00:00 info driver_reboot                2 |#
-2026-06-28 09:47:07.284683+00:00 info driver_stat                 10 |#######
-2026-06-28 09:47:07.284741+00:00 info driver_total                12 |########
-2026-06-28 09:47:07.284789+00:00 info cmd_latency_ms: n=11 min=1 avg=1.0 max=1 p95=1
-2026-06-28 09:47:07.284845+00:00 info (all samples equal)
-2026-06-28 09:47:07.284891+00:00 info ==================== end dmd_mgmt metrics ====================
+2026-06-29 18:01:46.593842+00:00 info management server listening on port 5000
+2026-06-29 18:01:46.598370+00:00 info inventory loaded from config/devices.csv: 10 device(s)
+2026-06-29 18:01:46.924780+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
+2026-06-29 18:01:46.927319+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:46.927933+00:00 info CMD send cmd=seclog imei=101000000000005 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:47.063312+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
+2026-06-29 18:01:47.064564+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:47.065566+00:00 info CMD send cmd=seclog imei=101000000000008 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:47.256260+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
+2026-06-29 18:01:47.257433+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:47.258258+00:00 info CMD send cmd=seclog imei=101000000000009 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:48.229310+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
+2026-06-29 18:01:48.230323+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:48.231058+00:00 info CMD send cmd=seclog imei=101000000000003 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:48.642562+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
+2026-06-29 18:01:48.643604+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:48.644245+00:00 info CMD send cmd=seclog imei=101000000000006 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:49.512653+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
+2026-06-29 18:01:49.513610+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:49.514234+00:00 info CMD send cmd=seclog imei=101000000000001 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:49.791056+00:00 info DRIVER cmd=reboot imei=101000000000007 result={<<"REBOOT">>,0}
+2026-06-29 18:01:52.381472+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
+2026-06-29 18:01:52.382531+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:52.383048+00:00 info CMD send cmd=seclog imei=101000000000004 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:56.402450+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
+2026-06-29 18:01:56.403744+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:56.404410+00:00 info CMD send cmd=seclog imei=101000000000010 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:56.532322+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
+2026-06-29 18:01:56.533715+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:56.534206+00:00 info CMD send cmd=seclog imei=101000000000002 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:56.875162+00:00 info DRIVER cmd=reboot imei=101000000000006 result={<<"REBOOT">>,0}
+2026-06-29 18:01:56.927464+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
+2026-06-29 18:01:56.928493+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:56.929400+00:00 info CMD send cmd=seclog imei=101000000000005 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:57.065356+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
+2026-06-29 18:01:57.066404+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:57.067356+00:00 info CMD send cmd=seclog imei=101000000000008 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:57.257321+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
+2026-06-29 18:01:57.258482+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:57.259372+00:00 info CMD send cmd=seclog imei=101000000000009 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:58.231329+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
+2026-06-29 18:01:58.232555+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:58.233448+00:00 info CMD send cmd=seclog imei=101000000000003 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:58.814021+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
+2026-06-29 18:01:58.815283+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:58.815900+00:00 info CMD send cmd=seclog imei=101000000000007 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:01:59.514614+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
+2026-06-29 18:01:59.515823+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:01:59.516751+00:00 info CMD send cmd=seclog imei=101000000000001 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:01.192189+00:00 info DRIVER cmd=stat imei=101000000000010 result={<<"STAT">>,0}
+2026-06-29 18:02:02.383377+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
+2026-06-29 18:02:02.384367+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:02.385318+00:00 info CMD send cmd=seclog imei=101000000000004 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:03.759566+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
+2026-06-29 18:02:03.760990+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:03.761693+00:00 info CMD send cmd=seclog imei=101000000000006 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:05.069948+00:00 info DRIVER cmd=stat imei=101000000000004 result={<<"STAT">>,0}
+2026-06-29 18:02:06.404598+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
+2026-06-29 18:02:06.405562+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:06.406396+00:00 info CMD send cmd=seclog imei=101000000000010 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:06.534576+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
+2026-06-29 18:02:06.535364+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:06.536237+00:00 info CMD send cmd=seclog imei=101000000000002 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:06.929581+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
+2026-06-29 18:02:06.930665+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:06.931236+00:00 info CMD send cmd=seclog imei=101000000000005 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:07.067450+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
+2026-06-29 18:02:07.068476+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:07.069200+00:00 info CMD send cmd=seclog imei=101000000000008 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:07.259309+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
+2026-06-29 18:02:07.260337+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:07.261254+00:00 info CMD send cmd=seclog imei=101000000000009 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:08.233408+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
+2026-06-29 18:02:08.234393+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:08.235012+00:00 info CMD send cmd=seclog imei=101000000000003 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:08.815672+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
+2026-06-29 18:02:08.817272+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:08.818068+00:00 info CMD send cmd=seclog imei=101000000000007 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:09.516355+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
+2026-06-29 18:02:09.517468+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:09.517988+00:00 info CMD send cmd=seclog imei=101000000000001 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:09.745064+00:00 info DRIVER cmd=stat imei=101000000000007 result={<<"STAT">>,0}
+2026-06-29 18:02:12.385488+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
+2026-06-29 18:02:12.386420+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:12.387030+00:00 info CMD send cmd=seclog imei=101000000000004 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:13.761587+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
+2026-06-29 18:02:13.762526+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:13.763216+00:00 info CMD send cmd=seclog imei=101000000000006 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:14.773271+00:00 info DRIVER cmd=stat imei=101000000000003 result={<<"STAT">>,0}
+2026-06-29 18:02:16.406777+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
+2026-06-29 18:02:16.408173+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:16.408746+00:00 info CMD send cmd=seclog imei=101000000000010 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:16.536272+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
+2026-06-29 18:02:16.537181+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:16.537808+00:00 info CMD send cmd=seclog imei=101000000000002 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:16.931360+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
+2026-06-29 18:02:16.932456+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:16.933206+00:00 info CMD send cmd=seclog imei=101000000000005 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:17.069401+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
+2026-06-29 18:02:17.070561+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:17.071243+00:00 info CMD send cmd=seclog imei=101000000000008 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:17.261403+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
+2026-06-29 18:02:17.262274+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:17.262808+00:00 info CMD send cmd=seclog imei=101000000000009 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:18.235318+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
+2026-06-29 18:02:18.236147+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:18.236695+00:00 info CMD send cmd=seclog imei=101000000000003 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:18.817550+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
+2026-06-29 18:02:18.818646+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:18.819341+00:00 info CMD send cmd=seclog imei=101000000000007 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:19.014109+00:00 info DRIVER cmd=stat imei=101000000000004 result={<<"STAT">>,0}
+2026-06-29 18:02:19.518294+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
+2026-06-29 18:02:19.519313+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:19.520034+00:00 info CMD send cmd=seclog imei=101000000000001 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:22.387427+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
+2026-06-29 18:02:22.388446+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:22.389283+00:00 info CMD send cmd=seclog imei=101000000000004 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:23.763635+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
+2026-06-29 18:02:23.764595+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:23.765401+00:00 info CMD send cmd=seclog imei=101000000000006 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:25.759799+00:00 info DRIVER cmd=stat imei=101000000000004 result={<<"STAT">>,0}
+2026-06-29 18:02:26.409476+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
+2026-06-29 18:02:26.410387+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:26.411057+00:00 info CMD send cmd=seclog imei=101000000000010 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:26.538429+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
+2026-06-29 18:02:26.539401+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:26.540041+00:00 info CMD send cmd=seclog imei=101000000000002 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:26.933317+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
+2026-06-29 18:02:26.934398+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:26.934998+00:00 info CMD send cmd=seclog imei=101000000000005 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:27.071293+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
+2026-06-29 18:02:27.072443+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:27.073114+00:00 info CMD send cmd=seclog imei=101000000000008 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:27.263315+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
+2026-06-29 18:02:27.264364+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:27.265165+00:00 info CMD send cmd=seclog imei=101000000000009 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:28.237360+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
+2026-06-29 18:02:28.238383+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:28.239116+00:00 info CMD send cmd=seclog imei=101000000000003 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:28.819704+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
+2026-06-29 18:02:28.820700+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:28.821374+00:00 info CMD send cmd=seclog imei=101000000000007 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:29.520417+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
+2026-06-29 18:02:29.521125+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:29.521813+00:00 info CMD send cmd=seclog imei=101000000000001 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:30.485045+00:00 info DRIVER cmd=stat imei=101000000000004 result={<<"STAT">>,0}
+2026-06-29 18:02:32.389660+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
+2026-06-29 18:02:32.390588+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:32.391204+00:00 info CMD send cmd=seclog imei=101000000000004 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:33.765489+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
+2026-06-29 18:02:33.766492+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:33.767216+00:00 info CMD send cmd=seclog imei=101000000000006 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:33.959574+00:00 info DRIVER cmd=stat imei=101000000000004 result={<<"STAT">>,0}
+2026-06-29 18:02:36.411439+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
+2026-06-29 18:02:36.412556+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:36.413346+00:00 info CMD send cmd=seclog imei=101000000000010 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:36.540328+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
+2026-06-29 18:02:36.541231+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:36.541747+00:00 info CMD send cmd=seclog imei=101000000000002 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:36.935364+00:00 info CALL recv imei=101000000000005 ip=127.0.0.6
+2026-06-29 18:02:36.936588+00:00 info CMD send cmd=stat imei=101000000000005 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:36.937429+00:00 info CMD send cmd=seclog imei=101000000000005 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:37.073557+00:00 info CALL recv imei=101000000000008 ip=127.0.0.9
+2026-06-29 18:02:37.074352+00:00 info CMD send cmd=stat imei=101000000000008 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:37.075193+00:00 info CMD send cmd=seclog imei=101000000000008 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:37.265324+00:00 info CALL recv imei=101000000000009 ip=127.0.0.10
+2026-06-29 18:02:37.266419+00:00 info CMD send cmd=stat imei=101000000000009 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:37.267031+00:00 info CMD send cmd=seclog imei=101000000000009 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:38.239350+00:00 info CALL recv imei=101000000000003 ip=127.0.0.4
+2026-06-29 18:02:38.240525+00:00 info CMD send cmd=stat imei=101000000000003 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:38.241291+00:00 info CMD send cmd=seclog imei=101000000000003 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:38.821625+00:00 info CALL recv imei=101000000000007 ip=127.0.0.8
+2026-06-29 18:02:38.822617+00:00 info CMD send cmd=stat imei=101000000000007 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:38.823211+00:00 info CMD send cmd=seclog imei=101000000000007 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:39.522651+00:00 info CALL recv imei=101000000000001 ip=127.0.0.2
+2026-06-29 18:02:39.523474+00:00 info CMD send cmd=stat imei=101000000000001 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:39.524393+00:00 info CMD send cmd=seclog imei=101000000000001 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:39.650681+00:00 info DRIVER cmd=stat imei=101000000000001 result={<<"STAT">>,0}
+2026-06-29 18:02:42.391707+00:00 info CALL recv imei=101000000000004 ip=127.0.0.5
+2026-06-29 18:02:42.392747+00:00 info CMD send cmd=stat imei=101000000000004 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:42.393452+00:00 info CMD send cmd=seclog imei=101000000000004 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:43.767389+00:00 info CALL recv imei=101000000000006 ip=127.0.0.7
+2026-06-29 18:02:43.768338+00:00 info CMD send cmd=stat imei=101000000000006 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:43.768985+00:00 info CMD send cmd=seclog imei=101000000000006 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:46.413396+00:00 info CALL recv imei=101000000000010 ip=127.0.0.11
+2026-06-29 18:02:46.414449+00:00 info CMD send cmd=stat imei=101000000000010 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:46.414945+00:00 info CMD send cmd=seclog imei=101000000000010 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:46.542310+00:00 info CALL recv imei=101000000000002 ip=127.0.0.3
+2026-06-29 18:02:46.543222+00:00 info CMD send cmd=stat imei=101000000000002 reason=on_call result={<<"STAT">>,0}
+2026-06-29 18:02:46.543842+00:00 info CMD send cmd=seclog imei=101000000000002 reason=secstat result={<<"SECLOG">>,0}
+2026-06-29 18:02:46.613747+00:00 info ==================== dmd_mgmt metrics (uptime 60s) ====================
+2026-06-29 18:02:46.613819+00:00 info counters:
+2026-06-29 18:02:46.613843+00:00 info call_triggered_stat         59 |########################################
+2026-06-29 18:02:46.613912+00:00 info calls_received              59 |########################################
+2026-06-29 18:02:46.613961+00:00 info driver_ok                   11 |#######
+2026-06-29 18:02:46.614011+00:00 info driver_reboot                2 |#
+2026-06-29 18:02:46.614059+00:00 info driver_stat                  9 |######
+2026-06-29 18:02:46.614158+00:00 info driver_total                11 |#######
+2026-06-29 18:02:46.614208+00:00 info seclog_triggered            59 |########################################
+2026-06-29 18:02:46.614283+00:00 info cmd_latency_ms: n=11 min=0 avg=0.9 max=1 p95=1
+2026-06-29 18:02:46.614339+00:00 info 0-0      |### 1
+2026-06-29 18:02:46.614388+00:00 info 1-1      |############################## 10
+2026-06-29 18:02:46.614413+00:00 info 2-2      | 0
+2026-06-29 18:02:46.614432+00:00 info 3-3      | 0
+2026-06-29 18:02:46.614449+00:00 info 4-4      | 0
+2026-06-29 18:02:46.614473+00:00 info 5-5      | 0
+2026-06-29 18:02:46.614572+00:00 info ==================== end dmd_mgmt metrics ====================

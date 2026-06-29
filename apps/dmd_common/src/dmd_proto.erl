@@ -52,9 +52,10 @@ read_msg(Transport, Timeout) ->
 encode_call(IMEI, IP) when is_binary(IMEI) ->
     <<"CALL:", IMEI/binary, ",", (ip_to_bin(IP))/binary>>.
 
--spec encode_command(stat | reboot) -> binary().
+-spec encode_command(stat | reboot | seclog) -> binary().
 encode_command(stat) -> <<"STAT">>;
-encode_command(reboot) -> <<"REBOOT">>.
+encode_command(reboot) -> <<"REBOOT">>;
+encode_command(seclog) -> <<"SECLOG">>.
 
 -spec decode_request(binary()) ->
           {call, binary(), binary()}
@@ -67,6 +68,7 @@ decode_request(<<"CALL:", Rest/binary>>) ->
     end;
 decode_request(<<"STAT">>) -> {command, stat};
 decode_request(<<"REBOOT">>) -> {command, reboot};
+decode_request(<<"SECLOG">>) -> {command, seclog};
 decode_request(Other) -> {command, {unknown, Other}}.
 
 %%====================================================================
@@ -125,7 +127,7 @@ ip_to_bin({A,B,C,D}) ->
 cmd_name(call) -> <<"CALL">>;
 cmd_name(stat) -> <<"STAT">>;
 cmd_name(reboot) -> <<"REBOOT">>;
-cmd_name(seclogs) -> <<"SECLOGS">>;
+cmd_name(seclog) -> <<"SECLOG">>;
 cmd_name({config, _}) -> <<"CONFIG">>;
 cmd_name({firmware, _}) -> <<"FIRMWARE">>;
 cmd_name({unknown, _}) -> <<"ERR">>;

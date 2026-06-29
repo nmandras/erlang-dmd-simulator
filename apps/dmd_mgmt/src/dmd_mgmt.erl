@@ -20,8 +20,8 @@ load_csv(Path) ->
 -spec list_devices() -> [map()].
 list_devices() -> mgmt_registry:all().
 
-%% Send STAT or REBOOT to a device by IMEI.
--spec send_command(binary(), stat | reboot) ->
+%% Send STAT, REBOOT or SECLOG to a device by IMEI.
+-spec send_command(binary(), stat | reboot | seclog) ->
           {ok, {binary(), non_neg_integer(), binary()}} | {error, term()}.
 send_command(IMEI, Cmd) -> mgmt_commander:send_command(IMEI, Cmd).
 

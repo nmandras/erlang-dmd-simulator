@@ -25,8 +25,8 @@ handle({config, _Payload}, _Data) ->
     {0, dmd_proto:encode_response(<<"CONFIG">>, 0, <<"config-applied">>), none};
 handle({firmware, _Payload}, _Data) ->
     {0, dmd_proto:encode_response(<<"FIRMWARE">>, 0, <<"firmware-staged">>), none};
-handle(seclogs, _Data) ->
-    {0, dmd_proto:encode_response(<<"SECLOGS">>, 0, <<"no-events">>), none};
+handle(seclog, _Data) ->
+    {0, seclog_payload(), none};
 handle({unknown, _Raw}, _Data) ->
     {1, dmd_proto:encode_response(<<"ERR">>, 1, <<"unknown-command">>), none}.
 
@@ -67,6 +67,47 @@ stat_payload(#{imei := IMEI, boot_time := Bt}) ->
         <<"SECSTAT:1">>
     ],
     iolist_to_binary(lists:join(<<"\n">>, Lines)).
+
+%%====================================================================
+%% SECLOG response
+%%====================================================================
+
+%% A SECLOG response is 1..5 randomly generated syslog (RFC3164-style) lines,
+%% each with a random security event, joined by newlines under the SECLOG: tag.
+-spec seclog_payload() -> binary().
+seclog_payload() ->
+    N = rand:uniform(5),
+    Lines = [syslog_line() || _ <- lists:seq(1, N)],
+    iolist_to_binary([<<"SECLOG:">>, lists:join(<<"\n">>, Lines)]).
+
+syslog_line() ->
+    Pri = rand:uniform(191),
+    {{_Y, Mo, D}, {H, Mi, S}} = calendar:local_time(),
+    {Tag, Msg} = random_event(),
+    Pid = rand:uniform(30000),
+    iolist_to_binary(
+      io_lib:format("<~b>~s ~2.. b ~2..0b:~2..0b:~2..0b WM-E1S ~s[~b]: ~s",
+                    [Pri, month(Mo), D, H, Mi, S, Tag, Pid, Msg])).
+
+random_event() ->
+    Events = [
+        {<<"tamper">>,  <<"enclosure cover opened">>},
+        {<<"tamper">>,  <<"magnetic tamper detected">>},
+        {<<"meter">>,   <<"meter cover tamper switch triggered">>},
+        {<<"auth">>,    <<"authentication failure for user admin">>},
+        {<<"auth">>,    <<"successful login from 10.0.0.5">>},
+        {<<"sshd">>,    <<"invalid user root from 192.0.2.10">>},
+        {<<"kernel">>,  <<"watchdog reset detected">>},
+        {<<"sec">>,     <<"certificate validation succeeded">>},
+        {<<"sec">>,     <<"firmware signature verified">>},
+        {<<"sec">>,     <<"unauthorized configuration change blocked">>},
+        {<<"power">>,   <<"power loss event recorded">>}
+    ],
+    lists:nth(rand:uniform(length(Events)), Events).
+
+month(M) ->
+    element(M, {"Jan","Feb","Mar","Apr","May","Jun",
+               "Jul","Aug","Sep","Oct","Nov","Dec"}).
 
 %% A plausible engine-id hex tail derived from the IMEI.
 engine_hex(IMEI) ->

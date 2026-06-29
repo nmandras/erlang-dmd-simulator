@@ -19,6 +19,8 @@ call_round_trip_test() ->
 command_decode_test() ->
     ?assertEqual({command, stat}, dmd_proto:decode_request(<<"STAT">>)),
     ?assertEqual({command, reboot}, dmd_proto:decode_request(<<"REBOOT">>)),
+    ?assertEqual({command, seclog}, dmd_proto:decode_request(<<"SECLOG">>)),
+    ?assertEqual(<<"SECLOG">>, dmd_proto:encode_command(seclog)),
     ?assertEqual({command, {unknown, <<"NOPE">>}},
                  dmd_proto:decode_request(<<"NOPE">>)).
 
