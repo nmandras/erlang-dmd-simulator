@@ -1,5 +1,5 @@
 #!/usr/bin/env escript
-%%! -pa _build/default/lib/dmd_common/ebin -pa _build/default/lib/dmd_agent/ebin -pa _build/default/lib/dmd_mgmt/ebin +Q 1048576 +P 2000000
+%%! -pa _build/default/lib/dmd_common/ebin -pa _build/default/lib/wme/ebin -pa _build/default/lib/dmd_agent/ebin -pa _build/default/lib/dmd_mgmt/ebin +Q 1048576 +P 2000000
 %%
 %% Scale runner: start a large fleet plus the management server, run for a
 %% while, then stop both (which flushes each app's metrics report to its log).
@@ -21,7 +21,9 @@ main(Args) ->
 
     setup(dmd_agent, [{csv_file, Csv}, {mgmt_host, {127,0,0,1}}, {mgmt_port, 5000},
                       {reboot_duration_ms, 5000}, {log_file, "log/agent_scale.log"},
-                      {tls, false}]),
+                      %% Keep one listen socket per device at scale (WM-E adds a
+                      %% second port per device); enable it for smaller runs.
+                      {wme_enabled, false}, {tls, false}]),
     setup(dmd_mgmt, [{csv_file, Csv}, {mgmt_host, {127,0,0,1}}, {mgmt_port, 5000},
                      {log_file, "log/mgmt_scale.log"}, {stat_on_call, true},
                      {driver_enabled, true}, {driver_min_ms, 1000}, {driver_max_ms, 3000},

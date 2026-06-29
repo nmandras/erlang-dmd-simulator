@@ -18,8 +18,18 @@ init([IMEI, IP, Port, PeriodMs]) ->
           start => {device_agent, start_link, [IMEI, IP, Port, PeriodMs]}},
         #{id => listener,
           start => {device_listener, start_link, [self(), IMEI, IP, Port]}}
-    ],
+    ] ++ wme_children(IMEI, IP),
     {ok, {SupFlags, Children}}.
+
+%% Optional WM-E (config-read) listener on the device's IP:wme_port.
+wme_children(IMEI, IP) ->
+    case dmd_config:get(dmd_agent, wme_enabled, true) of
+        true ->
+            [#{id => wme_listener,
+               start => {device_wme_listener, start_link, [IMEI, IP]}}];
+        false ->
+            []
+    end.
 
 %% Resolve the agent pid of a device subtree. Must be called *after* init
 %% completes (e.g. from a connection handler), never from a child's init,

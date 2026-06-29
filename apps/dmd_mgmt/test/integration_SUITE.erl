@@ -8,13 +8,13 @@
 -export([all/0, init_per_suite/1, end_per_suite/1]).
 -export([calls_logged/1, command_works/1, reboot_command/1, driver_runs/1,
          unknown_device/1, metrics_collected/1, call_triggers_stat/1,
-         seclog_command/1, stat_triggers_seclog/1]).
+         seclog_command/1, stat_triggers_seclog/1, wme_config_read/1]).
 
 -define(MGMT_PORT, 5055).
 
 all() ->
     [calls_logged, command_works, reboot_command, seclog_command,
-     call_triggers_stat, stat_triggers_seclog,
+     wme_config_read, call_triggers_stat, stat_triggers_seclog,
      driver_runs, unknown_device, metrics_collected].
 
 init_per_suite(Config) ->
@@ -86,6 +86,16 @@ driver_runs(Config) ->
 unknown_device(_Config) ->
     ?assertEqual({error, device_not_found},
                  dmd_mgmt:send_command(<<"999999999999999">>, stat)),
+    ok.
+
+%% The server acts as a WMETerm client and reads the device's WM-E config blob
+%% over the device's WM-E port; it matches what the device serves.
+wme_config_read(_Config) ->
+    IMEI = <<"101000000000001">>,
+    {ok, Blob} = dmd_mgmt:wme_read_config(IMEI, config),
+    {ok, Expected} = device_wme:config_blob(IMEI, 16#FF),
+    ?assertEqual(Expected, Blob),
+    ?assert(byte_size(Blob) > 256),  %% spans multiple V1 packets
     ok.
 
 %% SECLOG returns 1..5 syslog-format security event lines.

@@ -9,6 +9,7 @@ OTP applications** sharing a common library:
 | `dmd_agent`  | The device fleet. Each device is a TCP *client* (periodic status CALLs) and a TCP *server* (answers `STAT`/`REBOOT`). |
 | `dmd_mgmt`   | The mock management server. Ingests CALLs, and autonomously drives random commands to devices. |
 | `dmd_common` | Shared library: wire protocol, transport, config, CSV, logging.      |
+| `wme`        | WM-E (WME) protocol library: IEC handshake + config read, client and device simulator (see below). |
 
 Both applications read the same **device inventory CSV** (`imei,ip,port,callperiod`),
 so the agent knows which devices to spawn and the server knows where to reach them.
@@ -88,6 +89,30 @@ imei,ip,port,callperiod
 
 `callperiod` is in seconds. Regenerate it from the shell with
 `dmd_csv:generate_file("config/devices.csv", 10).`
+
+## WME protocol (config read)
+
+Alongside the text protocol, each device also speaks the **WM-E (WME) wire
+protocol** as a *server* on its own IP at `wme_port` (default `9998`), and the
+management server acts as the **WMETerm client**. This is a focused slice of the
+WM-E spec: the IEC 62056-21 identification handshake (`/?…!` → `/ELS…` → `059`)
+followed by a config **read** (start-read `0x67` → header `0x68` → packet
+`0x70`/`0x71`), with per-frame XOR checksums and a Fletcher-16 integrity check
+over the reassembled blob. (Write, syslog, baud-change and password are out of
+scope in this slice; the AES password KDF is undocumented.)
+
+The protocol lives in the standalone `wme` library app (`wme_checksum`,
+`wme_codec`, `wme_transport`, `wme_handshake`, `wme_client`, `wme_sim_device`).
+On the device side, `device_wme_listener` serves a per-device config blob
+(`device_wme:config_blob/2`, derived from the IMEI). Read one from the server:
+
+```erlang
+dmd_mgmt:wme_read_config(<<"101000000000001">>, config).
+%% {ok, <<"WME-CONFIG imei=101000000000001\nparam001=2\n...">>}  (744 bytes)
+```
+
+Disable the per-device WME listener with `{wme_enabled, false}` (the scale
+runner does this so it keeps a single listen socket per device).
 
 ## Architecture
 

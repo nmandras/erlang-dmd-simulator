@@ -3,11 +3,12 @@
   {vsn, "0.1.0"},
   {registered, [dmd_mgmt_sup, mgmt_registry, mgmt_listener, mgmt_commander, mgmt_driver]},
   {mod, {dmd_mgmt_app, []}},
-  {applications, [kernel, stdlib, ssl, dmd_common]},
+  {applications, [kernel, stdlib, ssl, dmd_common, wme]},
   {env, [
     {csv_file, "config/devices.csv"},
     {mgmt_host, {127,0,0,1}},
     {mgmt_port, 5000},
+    {wme_port, 9998},
     {log_file, "log/mgmt.log"},
     {stat_on_call, true},
     {driver_enabled, true},
