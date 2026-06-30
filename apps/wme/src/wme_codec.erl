@@ -6,7 +6,9 @@
 -export([chunk_size/1, detect_version/1,
          start_read/1, parse_read_header/2,
          read_packet/1, parse_read_packet/2,
-         build_read_header/2, build_read_packet/3]).
+         build_read_header/2, build_read_packet/3,
+         start_syslog_read/2, parse_syslog_header/1,
+         build_syslog_header/1]).
 
 -spec chunk_size(v1 | v2) -> pos_integer().
 chunk_size(v2) -> ?CHUNK_V2;
@@ -71,6 +73,33 @@ parse_read_packet(<<?WME_H1, ?WME_H2, ?CMD_READ_RSP, Hi, Lo, Rest/binary>> = Fra
 parse_read_packet(_Other, _Chunk) ->
     {error, bad_read_packet}.
 
+%% Start-syslog-read request: 1B 16 50 FF <read_id> <count_hi> <count_lo> <xor>.
+-spec start_syslog_read(byte(), non_neg_integer()) -> binary().
+start_syslog_read(ReadId, Count) ->
+    Inner = <<?CMD_SYSLOG_READ, 16#FF, ReadId, (Count bsr 8):8, (Count band 16#FF):8>>,
+    <<?WME_H1, ?WME_H2, Inner/binary, (wme_checksum:xor_checksum(Inner, 0, 0))>>.
+
+%% Parse the 10-byte 0x51 response (always 256-byte syslog packets).
+-spec parse_syslog_header(binary()) -> {ok, map()} | {error, term()}.
+parse_syslog_header(<<?WME_H1, ?WME_H2, ?CMD_SYSLOG_HDR, 16#FF, 16#FF,
+                    SzMSB, SzLSB, FlMSB, FlLSB, Chk>> = Frame) ->
+    case wme_checksum:xor_checksum(Frame, 2, -1) of
+        Chk ->
+            Chunk = ?CHUNK_V1,
+            Size = SzMSB * Chunk + SzLSB,
+            Packets = case Size of
+                          0 -> 0;
+                          _ -> (Size + Chunk - 1) div Chunk
+                      end,
+            {ok, #{size => Size,
+                   fletcher => (FlMSB bsl 8) bor FlLSB,
+                   packets => Packets}};
+        _ ->
+            {error, bad_checksum}
+    end;
+parse_syslog_header(_Other) ->
+    {error, bad_syslog_header}.
+
 %%====================================================================
 %% Device side (simulator)
 %%====================================================================
@@ -91,4 +120,13 @@ build_read_packet(Blob, Index, Chunk) ->
     Raw = binary:part(Blob, Offset, Take),
     Data = <<Raw/binary, 0:((Chunk - Take) * 8)>>,
     Inner = <<?CMD_READ_RSP, (Index bsr 8):8, (Index band 16#FF):8, Data/binary>>,
+    <<?WME_H1, ?WME_H2, Inner/binary, (wme_checksum:xor_checksum(Inner, 0, 0))>>.
+
+%% Build the 0x51 start-syslog-read response for a blob.
+-spec build_syslog_header(binary()) -> binary().
+build_syslog_header(Blob) ->
+    Size = byte_size(Blob),
+    Chunk = ?CHUNK_V1,
+    {FM, FL} = wme_checksum:fletcher16(Blob),
+    Inner = <<?CMD_SYSLOG_HDR, 16#FF, 16#FF, (Size div Chunk), (Size rem Chunk), FM, FL>>,
     <<?WME_H1, ?WME_H2, Inner/binary, (wme_checksum:xor_checksum(Inner, 0, 0))>>.

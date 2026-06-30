@@ -9,14 +9,15 @@
 -export([calls_logged/1, command_works/1, reboot_command/1, driver_runs/1,
          unknown_device/1, metrics_collected/1, call_triggers_stat/1,
          seclog_command/1, stat_triggers_seclog/1, wme_config_read/1,
-         wme_status_on_call/1]).
+         wme_status_on_call/1, wme_status_triggers_syslog/1]).
 
 -define(MGMT_PORT, 5055).
 
 all() ->
     [calls_logged, command_works, reboot_command, seclog_command,
      wme_config_read, call_triggers_stat, stat_triggers_seclog,
-     wme_status_on_call, driver_runs, unknown_device, metrics_collected].
+     wme_status_on_call, wme_status_triggers_syslog,
+     driver_runs, unknown_device, metrics_collected].
 
 init_per_suite(Config) ->
     Priv = ?config(priv_dir, Config),
@@ -116,6 +117,17 @@ wme_status_on_call(Config) ->
         maps:get(wme_status_triggered, C, 0) > 0
     end, 100),
     ok = wait_file(?config(mgmt_log, Config), <<"WME read cmd=status">>),
+    ok.
+
+%% A wme status read reporting SECSTAT:1 makes the server follow up with a WM-E
+%% syslog read; the on-CALL path exercises this chain.
+wme_status_triggers_syslog(Config) ->
+    ok = wait_until(fun() ->
+        #{counters := C} = dmd_metrics:snapshot(dmd_mgmt),
+        maps:get(seclog_triggered, C, 0) > 0
+    end, 100),
+    ok = wait_file(?config(mgmt_log, Config), <<"WME read cmd=syslog">>),
+    ok = wait_file(?config(mgmt_log, Config), <<"entries=">>),
     ok.
 
 %% SECLOG returns 1..5 syslog-format security event lines.

@@ -40,9 +40,11 @@ accept_loop(LSock, IMEI) ->
         {ok, Sock} ->
             Ident = device_wme:ident(IMEI),
             Provider = fun(Option) -> device_wme:config_blob(IMEI, Option) end,
+            SyslogProvider = fun() -> {ok, device_wme:syslog_blob(IMEI)} end,
             Pid = spawn(fun() ->
                 receive go ->
-                    wme_sim_device:serve(Sock, Ident, 256, Provider, ?SESSION_TIMEOUT)
+                    wme_sim_device:serve(Sock, Ident, 256, Provider, SyslogProvider,
+                                         ?SESSION_TIMEOUT)
                 end
             end),
             case wme_transport:controlling_process(Sock, Pid) of

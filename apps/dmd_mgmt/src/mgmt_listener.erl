@@ -99,7 +99,34 @@ wme_status_on_call(IMEI) ->
     dmd_metrics:incr(dmd_mgmt, wme_status_triggered),
     Result = dmd_mgmt:wme_read_config(IMEI, status),
     logger:info("WME read cmd=status imei=~s reason=on_call result=~s",
-                [IMEI, summarise_wme(Result)], ?DOMAIN).
+                [IMEI, summarise_wme(Result)], ?DOMAIN),
+    maybe_chain_wme_syslog(IMEI, Result).
+
+maybe_chain_wme_syslog(IMEI, {ok, Status}) ->
+    case binary:match(Status, <<"SECSTAT:1">>) of
+        nomatch ->
+            ok;
+        _ ->
+            dmd_metrics:incr(dmd_mgmt, seclog_triggered),
+            SyslogResult = dmd_mgmt:wme_read_syslog(IMEI),
+            logger:info("WME read cmd=syslog imei=~s reason=secstat result=~s",
+                        [IMEI, summarise_syslog(SyslogResult)], ?DOMAIN)
+    end;
+maybe_chain_wme_syslog(_IMEI, _Result) ->
+    ok.
+
+summarise_syslog({ok, Blob}) ->
+    case wme_syslog:parse_blob(Blob) of
+        {ok, Entries} ->
+            Labels = [wme_syslog:message_name(0, maps:get(message_id, E))
+                      || E <- Entries],
+            io_lib:format("ok,~b bytes,~p entries=~p",
+                          [byte_size(Blob), length(Entries), Labels]);
+        {error, Reason} ->
+            io_lib:format("ok,~b bytes,parse_error=~p", [byte_size(Blob), Reason])
+    end;
+summarise_syslog(Other) ->
+    summarise_wme(Other).
 
 summarise_wme({ok, Bin}) when is_binary(Bin) ->
     io_lib:format("ok,~b bytes", [byte_size(Bin)]);

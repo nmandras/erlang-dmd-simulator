@@ -9,6 +9,13 @@
 -define(CMD_READ_PKT,   16#70).
 -define(CMD_READ_RSP,   16#71).
 
+-define(CMD_SYSLOG_READ, 16#50).
+-define(CMD_SYSLOG_HDR,  16#51).
+
+%% Syslog read IDs (plan §9.1)
+-define(SYSLOG_ID_DEVICE, 16#10).
+-define(SYSLOG_ID_USER,   16#11).
+
 %% Read option bytes
 -define(OPT_CONFIG, 16#FF).
 -define(OPT_STATUS, 16#0D).

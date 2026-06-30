@@ -79,7 +79,10 @@ the device's `DeviceType`:
   `SECLOG` — shown in `log/mgmt.log` as `cmd=stat reason=on_call` then
   `cmd=seclog reason=secstat`.
 - **wme (2):** performs a WM-E **status read** (option `0x0D`) — shown as
-  `WME read cmd=status … reason=on_call`.
+  `WME read cmd=status … reason=on_call`. If the status body reports
+  `SECSTAT:1`, it immediately follows up with a WM-E **syslog read**
+  (`0x50`/`0x10`) — shown as `WME read cmd=syslog … reason=secstat` with
+  parsed entry labels (`MESSAGE_DEVICE_*` per plans/Syslog.md).
 
 Gated by `stat_on_call`; both run off the CALL handler so the CALL ack isn't
 delayed.
@@ -197,7 +200,8 @@ inventory by **IMEI** and **DeviceType**:
   `log/agent.log` as `CMD recv … cmd=stat`.
 - **wme** (`DeviceType=2`): WM-E **status read** (`0x0D`) over the WM-E
   protocol on the device's `MgmtPort` — not text `STAT`. These appear in
-  `log/mgmt.log` as `WME read cmd=status … reason=on_call`.
+  `log/mgmt.log` as `WME read cmd=status … reason=on_call`, and when the status
+  body ends with `SECSTAT:1` as `WME read cmd=syslog … reason=secstat`.
 
 Disable on-CALL polling (wmr `STAT` and wme status read) with
 `{stat_on_call, false}`.

@@ -4,7 +4,7 @@
 %%% device IMEI.
 -module(device_wme).
 
--export([config_blob/2, ident/1]).
+-export([config_blob/2, ident/1, syslog_blob/1]).
 
 %% Provider for wme_sim_device: option byte -> blob.
 -spec config_blob(binary(), byte()) -> {ok, binary()} | error.
@@ -143,6 +143,36 @@ status_blob(IMEI) ->
         secstat_line(IMEI)
     ],
     iolist_to_binary([lists:join(<<"\n">>, Lines), <<"\n">>]).
+
+%% System syslog blob for WM-E read (0x50/0x10): RFC5424-style WM-E lines with
+%% CATEGORY_DEVICE payloads (plans/Syslog.md), deterministic per IMEI.
+-spec syslog_blob(binary()) -> binary().
+syslog_blob(IMEI) ->
+    N = 1 + erlang:phash2({IMEI, syslog}) rem 5,
+    Lines = [wme_syslog:format_entry(Opts) || Opts <- syslog_entries(IMEI, N)],
+    iolist_to_binary(Lines).
+
+syslog_entries(IMEI, N) ->
+    Pool = [
+        #{message_id => 1, payload => <<"5.3.61.0, 1">>},
+        #{message_id => 12, payload => syslog_config_start(IMEI)},
+        #{message_id => 13, payload => <<>>},
+        #{message_id => 10, payload => <<>>},
+        #{message_id => 8, payload => syslog_overflow(IMEI)}
+    ],
+    [lists:nth(1 + erlang:phash2({IMEI, I}) rem length(Pool), Pool)
+     || I <- lists:seq(1, N)].
+
+syslog_config_start(IMEI) ->
+    case erlang:phash2({IMEI, cfg}) rem 3 of
+        0 -> <<"CONFIG">>;
+        1 -> <<"LOCAL">>;
+        _ -> <<"MODEM">>
+    end.
+
+syslog_overflow(IMEI) ->
+    Ifaces = [<<"EMETER RX">>, <<"MODEM RX">>, <<"CONFIG RX">>, <<"CI RX">>],
+    lists:nth(1 + erlang:phash2({IMEI, ovf}) rem length(Ifaces), Ifaces).
 
 %% Shared modem identity / radio snapshot used by config and status reads.
 smp_lines(IMEI) ->

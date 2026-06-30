@@ -36,3 +36,13 @@ roundtrip_test() ->
 bad_checksum_test() ->
     Bad = <<16#1B,16#16,16#68,16#FF,16#FF,16#09,16#0C,16#4B,16#E9,16#00>>,
     ?assertEqual({error, bad_checksum}, wme_codec:parse_read_header(Bad, 256)).
+
+start_syslog_read_test() ->
+    ?assertEqual(<<16#1B,16#16,16#50,16#FF,16#10,16#00,16#00,16#BF>>,
+                 wme_codec:start_syslog_read(16#10, 0)).
+
+syslog_header_roundtrip_test() ->
+    Blob = iolist_to_binary([<<"<34>Jun 30 09:00:00 WM-E1S sec[1]: evt\n">>]),
+    {ok, M} = wme_codec:parse_syslog_header(wme_codec:build_syslog_header(Blob)),
+    ?assertEqual(byte_size(Blob), maps:get(size, M)),
+    ?assertEqual(1, maps:get(packets, M)).

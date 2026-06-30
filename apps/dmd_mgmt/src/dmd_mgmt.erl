@@ -3,7 +3,7 @@
 
 -export([load_csv/1, list_devices/0, send_command/2,
          driver_trigger/0, driver_count/0,
-         wme_read_config/2]).
+         wme_read_config/2, wme_read_syslog/1, wme_read_syslog/2]).
 
 %% (Re)load device inventory into the registry from a CSV file.
 -spec load_csv(file:name_all()) -> {ok, non_neg_integer()} | {error, term()}.
@@ -51,3 +51,17 @@ wme_option(config) -> 16#FF;
 wme_option(status) -> 16#0D;
 wme_option(meter) -> 16#0B;
 wme_option(N) when is_integer(N) -> N.
+
+%% Act as a WM-E client: read system syslog (0x50/0x10). Count 0 reads all entries.
+-spec wme_read_syslog(binary()) -> {ok, binary()} | {error, term()}.
+wme_read_syslog(IMEI) ->
+    wme_read_syslog(IMEI, 0).
+
+-spec wme_read_syslog(binary(), non_neg_integer()) -> {ok, binary()} | {error, term()}.
+wme_read_syslog(IMEI, Count) ->
+    case mgmt_registry:lookup(IMEI) of
+        {ok, #{ip := IP, port := Port}} ->
+            wme_client:read_syslog(IP, Port, Count, 30000);
+        {error, not_found} ->
+            {error, device_not_found}
+    end.
