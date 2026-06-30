@@ -65,7 +65,7 @@ handle_conn(Sock) ->
                            dmd_metrics:incr(dmd_mgmt, calls_received),
                            logger:info("CALL recv imei=~s ip=~s", [IMEI, IP], ?DOMAIN),
                            mgmt_registry:touch(IMEI, IP, online),
-                           maybe_poll_on_call(IMEI),
+                           act_on_call(IMEI),
                            dmd_proto:encode_response(call, 0);
                        _ ->
                            logger:warning("bad request: ~p", [Payload], ?DOMAIN),
@@ -80,7 +80,7 @@ handle_conn(Sock) ->
 %% On each CALL, the server polls the device asynchronously (so the CALL
 %% response is not delayed). wmr devices get text STAT; wme devices get a WM-E
 %% status read — both keyed off IMEI + DeviceType in the registry.
-maybe_poll_on_call(IMEI) ->
+act_on_call(IMEI) ->
     case dmd_config:get(dmd_mgmt, stat_on_call, true) of
         false ->
             ok;
@@ -88,20 +88,20 @@ maybe_poll_on_call(IMEI) ->
             case mgmt_registry:lookup(IMEI) of
                 {ok, #{device_type := 2}} ->
                     spawn(fun() -> wme_status_on_call(IMEI) end);
-                {ok, #{device_type := 1}} ->
-                    dmd_metrics:incr(dmd_mgmt, call_triggered_stat),
-                    mgmt_commander:send_async(IMEI, stat, on_call);
                 _ ->
+                    %% wmr (or unknown): STAT, which chains to SECLOG on SECSTAT:1
                     dmd_metrics:incr(dmd_mgmt, call_triggered_stat),
                     mgmt_commander:send_async(IMEI, stat, on_call)
             end
     end.
 
 wme_status_on_call(IMEI) ->
-    dmd_metrics:incr(dmd_mgmt, call_triggered_wme_status),
+    dmd_metrics:incr(dmd_mgmt, wme_status_triggered),
     Result = dmd_mgmt:wme_read_config(IMEI, status),
-    logger:info("WME status read imei=~s reason=on_call result=~p",
+    logger:info("WME read cmd=status imei=~s reason=on_call result=~s",
                 [IMEI, summarise_wme(Result)], ?DOMAIN).
 
-summarise_wme({ok, Blob}) -> {ok, byte_size(Blob)};
-summarise_wme(Other) -> Other.
+summarise_wme({ok, Bin}) when is_binary(Bin) ->
+    io_lib:format("ok,~b bytes", [byte_size(Bin)]);
+summarise_wme(Other) ->
+    io_lib:format("~p", [Other]).

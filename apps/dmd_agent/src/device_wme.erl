@@ -21,7 +21,7 @@ ident(_IMEI) ->
 %% A realistic WM-E configuration dump. Device-specific fields (modem IMEI,
 %% engine id, signal levels) are derived from the IMEI so reads are stable.
 full_config(IMEI) ->
-    Lines = [
+    ConfigLines = [
         <<"conn.apn_name = wm2m">>,
         <<"conn.apn_user = xxxxxxxx">>,
         <<"conn.apn_pass = xxxxxxxx">>,
@@ -128,13 +128,13 @@ full_config(IMEI) ->
         <<"user_syslog.message_id_filter = 65535.30.0.8191.255.0.0.255.0.1.0.0.0.0.4.0.0.0.0.4.0.0.4.0.0.1.2.0.0.0.0.0">>,
         <<"user_syslog.dm_category_id_filter = 67649691">>,
         <<"user_syslog.dm_message_id_filter = 2035.7.20.0.2.193.0.0.12.0.0.0.0.0.0.2.0.0.0.0.0.0.0.0.0.0.0.10.0.0.0.0.0">>
-    ] ++ smp_core_lines(IMEI),
-    iolist_to_binary([lists:join(<<"\n">>, Lines), <<"\n">>]).
+    ],
+    iolist_to_binary([lists:join(<<"\n">>, ConfigLines ++ smp_lines(IMEI)), <<"\n">>]).
 
 %% WM-E status read (0x0D): the same modem snapshot as wmr STAT, without the
 %% `STAT:' tag — plus certificate validity, RTC, UPTIME and SECSTAT.
 status_blob(IMEI) ->
-    Lines = smp_core_lines(IMEI) ++ [
+    Lines = smp_lines(IMEI) ++ [
         <<"emeter.ca.validity = 2026-05-19 08:38:07;2032-08-06 15:24:56">>,
         <<"config.ca.validity = 2026-05-19 08:38:07;2032-08-06 15:24:56">>,
         <<"crl.validity = 0000-00-00 00:00:00;0000-00-00 00:00:00">>,
@@ -145,25 +145,23 @@ status_blob(IMEI) ->
     iolist_to_binary([lists:join(<<"\n">>, Lines), <<"\n">>]).
 
 %% Shared modem identity / radio snapshot used by config and status reads.
-smp_core_lines(IMEI) ->
+smp_lines(IMEI) ->
     {Rssi, Sinr, Rsrq, Rsrp} = signal(IMEI),
     OsVersion = iolist_to_binary(
         io_lib:format("smp.os_version = EC200A EC200AEUHAR01A30M16 OPERATOR=21601 "
                       "NET=21601,7 STATUS=1 IP=172.31.158.137 RSSI=~b TXPWR=0 "
                       "CID=71937 SINR=~b ECIO=0 RSRQ=~b RSRP=~b",
                       [Rssi, Sinr, Rsrq, Rsrp])),
-    [
-        <<"smp.firmware_version = 5.3.61.0">>,
-        OsVersion,
-        <<"smp.revision_id = WM-E1S WM-E1S 3.2.6">>,
-        <<"smp.modem_sn = 142588346492215954">>,
-        <<"smp.modem_imei = ", IMEI/binary, ", ICC = 8936200000550566520F">>,
-        <<"smp.sim_imsi = 216012055056652">>,
-        <<"smp.vendor = WM Systems LLC.">>,
-        <<"smp.lte_bands = 3">>,
-        <<"smp.battery = 4200, CAPACITY = 100">>,
-        <<"smp.engineID = 0x8000CBCE03", (engine_tail(IMEI))/binary>>
-    ].
+    [<<"smp.firmware_version = 5.3.61.0">>,
+     OsVersion,
+     <<"smp.revision_id = WM-E1S WM-E1S 3.2.6">>,
+     <<"smp.modem_sn = 142588346492215954">>,
+     <<"smp.modem_imei = ", IMEI/binary, ", ICC = 8936200000550566520F">>,
+     <<"smp.sim_imsi = 216012055056652">>,
+     <<"smp.vendor = WM Systems LLC.">>,
+     <<"smp.lte_bands = 3">>,
+     <<"smp.battery = 4200, CAPACITY = 100">>,
+     <<"smp.engineID = 0x8000CBCE03", (engine_tail(IMEI))/binary>>].
 
 uptime_line(IMEI) ->
     Uptime = (1 + erlang:phash2(IMEI) rem 864000) / 100.0,
