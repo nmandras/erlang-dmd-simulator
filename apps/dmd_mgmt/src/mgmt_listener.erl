@@ -65,7 +65,7 @@ handle_conn(Sock) ->
                            dmd_metrics:incr(dmd_mgmt, calls_received),
                            logger:info("CALL recv imei=~s ip=~s", [IMEI, IP], ?DOMAIN),
                            mgmt_registry:touch(IMEI, IP, online),
-                           maybe_stat_on_call(IMEI),
+                           maybe_poll_on_call(IMEI),
                            dmd_proto:encode_response(call, 0);
                        _ ->
                            logger:warning("bad request: ~p", [Payload], ?DOMAIN),
@@ -77,20 +77,31 @@ handle_conn(Sock) ->
     end,
     dmd_transport:close(Sock).
 
-%% On each CALL, the server polls the device by issuing a STAT back to it
-%% (asynchronously, so the CALL response is not delayed). Gated by config, and
-%% only for wmr (type 1) devices — wme devices have no text command listener.
-maybe_stat_on_call(IMEI) ->
-    case dmd_config:get(dmd_mgmt, stat_on_call, true) andalso is_wmr(IMEI) of
-        true ->
-            dmd_metrics:incr(dmd_mgmt, call_triggered_stat),
-            mgmt_commander:send_async(IMEI, stat, on_call);
+%% On each CALL, the server polls the device asynchronously (so the CALL
+%% response is not delayed). wmr devices get text STAT; wme devices get a WM-E
+%% status read — both keyed off IMEI + DeviceType in the registry.
+maybe_poll_on_call(IMEI) ->
+    case dmd_config:get(dmd_mgmt, stat_on_call, true) of
         false ->
-            ok
+            ok;
+        true ->
+            case mgmt_registry:lookup(IMEI) of
+                {ok, #{device_type := 2}} ->
+                    spawn(fun() -> wme_status_on_call(IMEI) end);
+                {ok, #{device_type := 1}} ->
+                    dmd_metrics:incr(dmd_mgmt, call_triggered_stat),
+                    mgmt_commander:send_async(IMEI, stat, on_call);
+                _ ->
+                    dmd_metrics:incr(dmd_mgmt, call_triggered_stat),
+                    mgmt_commander:send_async(IMEI, stat, on_call)
+            end
     end.
 
-is_wmr(IMEI) ->
-    case mgmt_registry:lookup(IMEI) of
-        {ok, #{device_type := Type}} -> Type =:= 1;
-        _ -> true
-    end.
+wme_status_on_call(IMEI) ->
+    dmd_metrics:incr(dmd_mgmt, call_triggered_wme_status),
+    Result = dmd_mgmt:wme_read_config(IMEI, status),
+    logger:info("WME status read imei=~s reason=on_call result=~p",
+                [IMEI, summarise_wme(Result)], ?DOMAIN).
+
+summarise_wme({ok, Blob}) -> {ok, byte_size(Blob)};
+summarise_wme(Other) -> Other.

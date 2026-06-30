@@ -99,6 +99,12 @@ wme_config_read(_Config) ->
     {ok, Expected} = device_wme:config_blob(IMEI, 16#FF),
     ?assertEqual(Expected, Blob),
     ?assert(byte_size(Blob) > 256),  %% spans multiple V1 packets
+    {ok, Status} = dmd_mgmt:wme_read_config(IMEI, status),
+    ?assertMatch(<<"smp.firmware_version">>, Status),
+    ?assertMatch(<<"smp.modem_imei = ", IMEI/binary>>, Status),
+    ?assertMatch(<<"RTC:">>, Status),
+    ?assertMatch(<<"UPTIME:">>, Status),
+    ?assertMatch(<<"SECSTAT:">>, Status),
     ok.
 
 %% SECLOG returns 1..5 syslog-format security event lines.

@@ -6,7 +6,7 @@ OTP applications** sharing a common library:
 
 | Application  | Role                                                                 |
 |--------------|----------------------------------------------------------------------|
-| `dmd_agent`  | The device fleet. Each device is a TCP *client* (periodic status CALLs) and a TCP *server* (answers `STAT`/`REBOOT`). |
+| `dmd_agent`  | The device fleet. Each device is a TCP *client* (periodic CALLs) and a TCP *server* (wmr: `STAT`/`REBOOT`; wme: WM-E read). |
 | `dmd_mgmt`   | The mock management server. Ingests CALLs, and autonomously drives random commands to devices. |
 | `dmd_common` | Shared library: wire protocol, transport, config, CSV, logging.      |
 | `wme`        | WM-E (WME) protocol library: IEC handshake + config read, client and device simulator (see below). |
@@ -70,11 +70,12 @@ SECLOG:<188>Jun 29 18:00:32 WM-E1S sec[21749]: certificate validation succeeded
 <34>Jun 29 18:00:32 WM-E1S tamper[4021]: enclosure cover opened
 ```
 
-**STAT → SECLOG chain:** a STAT body ends with `SECSTAT:1` with probability
-`secstat_probability` (default `1.0`), otherwise `SECSTAT:0`. When the server's
-on-CALL STAT completes and reports `SECSTAT:1`, it immediately follows up with a
-`SECLOG` to fetch the device's security events. The chain shows in
-`log/mgmt.log` as `cmd=stat reason=on_call` then `cmd=seclog reason=secstat`.
+**STAT → SECLOG chain (wmr only):** a STAT body ends with `SECSTAT:1` with
+probability `secstat_probability` (default `1.0`), otherwise `SECSTAT:0`. When
+the server's on-CALL STAT to a **wmr** device completes and reports
+`SECSTAT:1`, it immediately follows up with a `SECLOG` to fetch the device's
+security events. The chain shows in `log/mgmt.log` as `cmd=stat reason=on_call`
+then `cmd=seclog reason=secstat`.
 
 ## Device inventory CSV
 
@@ -86,9 +87,13 @@ IMEI,IP,MgmtPort,PortSSH,DeviceType,TLSEnable,Reptime,LoginName,LoginPass,Equipm
 101000000000009,127.10.0.9,6000,22,2,0,10,root,admin,Group-2,
 ```
 
-- **DeviceType** selects the device's inbound listener: `1` = **wmr** (CALL +
-  STAT/REBOOT/SECLOG text protocol), `2` = **wme** (CALL + WM-E config read).
-  Every device sends the periodic CALL regardless of type.
+- **DeviceType** tells the management server how to poll a device after a CALL
+  and selects the device's inbound listener: `1` = **wmr** (on-CALL text
+  `STAT`/`SECLOG`/`REBOOT`), `2` = **wme** (on-CALL WM-E status read). **wmr
+  and wme devices use the same CALL wire format** — every device sends
+  `CALL:<IMEI>,<own-ip>` on the same schedule; the server resolves the caller's
+  IMEI against this CSV (including **DeviceType**) to decide whether to issue
+  text `STAT` or a WM-E status read (`0x0D`).
 - **MgmtPort** is the device's listen port; **Reptime** is the CALL period in
   seconds. **PortSSH**, **TLSEnable**, **LoginName**, **LoginPass**,
   **EquipmentGroup** and **Comments** are stored as metadata.
@@ -98,9 +103,14 @@ or, with options, `dmd_csv:generate(Wmr, Wme, #{start_imei => 1, base_ip => {127
 
 ## WME protocol (config read)
 
-Devices whose `DeviceType` is `2` speak the **WM-E (WME) wire protocol** as a
-*server* on their own IP at `MgmtPort`, and the management server acts as the
-**WMETerm client**. This is a focused slice of the WM-E spec: the IEC 62056-21
+Devices whose `DeviceType` is `2` still **CALL the management server the same
+way as wmr devices**; only the server's post-CALL poll and the device's inbound
+listener differ. After each CALL from a wme device, the server looks up its IMEI
+and `DeviceType` in the registry and triggers a WM-E **status read** (`0x0D`) —
+the wme equivalent of on-CALL `STAT`. The device speaks the **WM-E (WME) wire
+protocol** as a *server* on its own IP at `MgmtPort`, and the management server
+acts as the **WMETerm client**. This is a focused slice of the WM-E spec: the
+IEC 62056-21
 identification handshake (`/?…!` → `/ELS…` → `059`) followed by a config **read**
 (start-read `0x67` → header `0x68` → packet `0x70`/`0x71`), with per-frame XOR
 checksums and a Fletcher-16 integrity check over the reassembled blob. (Write,
@@ -109,17 +119,29 @@ password KDF is undocumented.)
 
 The protocol lives in the standalone `wme` library app (`wme_checksum`,
 `wme_codec`, `wme_transport`, `wme_handshake`, `wme_client`, `wme_sim_device`).
-On the device side, `device_wme_listener` serves a realistic per-device config
-blob (`device_wme:config_blob/2`) — the usual WM-E `key = value` dump, with the
-modem IMEI, engine id and signal levels derived from the device's IMEI. Read one
-from the server:
+On the device side, `device_wme_listener` serves realistic per-device blobs via
+`device_wme:config_blob/2`: a full config dump for `0xFF`, and a modem-style
+status snapshot for `0x0D` (the on-CALL poll for wme devices). The status read
+matches the wmr `STAT` body — `smp.*` fields, certificate validity, `RTC:`,
+`UPTIME:` and `SECSTAT:` — without the `STAT:` tag:
+
+```
+smp.firmware_version = 5.3.61.0
+smp.os_version = EC200A EC200AEUHAR01A30M16 OPERATOR=21601 NET=21601,7 STATUS=1 IP=172.31.158.137 RSSI=-110 TXPWR=0 CID=71937 SINR=22 ECIO=0 RSRQ=-4 RSRP=-101
+smp.revision_id = WM-E1S WM-E1S 3.2.6
+smp.modem_sn = 142588346492215954
+smp.modem_imei = 101000000000003, ICC = 8936200000550566520F
+...
+RTC:2026-06-29T21:43:14+00:00
+UPTIME:5.00
+SECSTAT:1
+```
+
+Read config or status from the server:
 
 ```erlang
-dmd_mgmt:wme_read_config(<<"101000000000009">>, config).   %% a DeviceType=2 device
-%% {ok, <<"conn.apn_name = wm2m\nconn.apn_user = xxxxxxxx\n...
-%%        smp.modem_imei = 101000000000009, ICC = ...\n
-%%        smp.os_version = EC200A ... RSSI=-83 SINR=7 RSRQ=-9 RSRP=-101\n
-%%        smp.engineID = 0x8000CBCE03000000000009\n">>}   (~3 KB, ~12 V1 packets)
+dmd_mgmt:wme_read_config(<<"101000000000009">>, config).   %% full config (~3 KB)
+dmd_mgmt:wme_read_config(<<"101000000000009">>, status).   %% on-CALL status read
 ```
 
 ## Architecture
@@ -159,10 +181,18 @@ Example:
 2026-06-28 09:20:03.784 info DRIVER cmd=stat imei=101000000000006 result={<<"STAT">>,0}
 ```
 
-On every CALL it receives, the server polls the calling device by issuing a
-`STAT` back to it (asynchronously, so the CALL response is not delayed). These
-appear in `log/mgmt.log` as `CMD send … reason=on_call` and in `log/agent.log`
-as `CMD recv … cmd=stat`. Disable with `{stat_on_call, false}`.
+On every CALL it receives, the server polls the calling device asynchronously
+(so the `CALL:0` reply is not delayed). The poll is chosen from the device
+inventory by **IMEI** and **DeviceType**:
+
+- **wmr** (`DeviceType=1`): text `STAT` on the device's `MgmtPort`. These
+  appear in `log/mgmt.log` as `CMD send … reason=on_call` and in
+  `log/agent.log` as `CMD recv … cmd=stat`.
+- **wme** (`DeviceType=2`): WM-E **status read** (`0x0D`) over the WM-E
+  protocol on the device's `MgmtPort` — not text `STAT`.
+
+Disable on-CALL polling (wmr `STAT` and wme status read) with
+`{stat_on_call, false}`.
 
 The autonomous driver (`mgmt_driver`) picks a random device every
 `driver_min_ms`…`driver_max_ms` and sends a random command (mostly `STAT`,

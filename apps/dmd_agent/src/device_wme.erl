@@ -1,6 +1,7 @@
 %%% @doc Per-device WM-E config content. Generates a realistic device config
-%%% blob (key = value lines, as a real WM-E modem returns for a 0xFF read) plus
-%%% a small status blob, derived deterministically from the device IMEI.
+%%% blob (key = value lines, as a real WM-E modem returns for a 0xFF read) and a
+%%% modem-style status blob for a 0x0D read, derived deterministically from the
+%%% device IMEI.
 -module(device_wme).
 
 -export([config_blob/2, ident/1]).
@@ -20,12 +21,6 @@ ident(_IMEI) ->
 %% A realistic WM-E configuration dump. Device-specific fields (modem IMEI,
 %% engine id, signal levels) are derived from the IMEI so reads are stable.
 full_config(IMEI) ->
-    {Rssi, Sinr, Rsrq, Rsrp} = signal(IMEI),
-    OsVersion = iolist_to_binary(
-        io_lib:format("smp.os_version = EC200A EC200AEUHAR01A30M16 OPERATOR=21601 "
-                      "NET=21601,7 STATUS=1 IP=172.31.158.137 RSSI=~b TXPWR=0 "
-                      "CID=71937 SINR=~b ECIO=0 RSRQ=~b RSRP=~b",
-                      [Rssi, Sinr, Rsrq, Rsrp])),
     Lines = [
         <<"conn.apn_name = wm2m">>,
         <<"conn.apn_user = xxxxxxxx">>,
@@ -132,7 +127,32 @@ full_config(IMEI) ->
         <<"user_syslog.category_id_filter = 105398939">>,
         <<"user_syslog.message_id_filter = 65535.30.0.8191.255.0.0.255.0.1.0.0.0.0.4.0.0.0.0.4.0.0.4.0.0.1.2.0.0.0.0.0">>,
         <<"user_syslog.dm_category_id_filter = 67649691">>,
-        <<"user_syslog.dm_message_id_filter = 2035.7.20.0.2.193.0.0.12.0.0.0.0.0.0.2.0.0.0.0.0.0.0.0.0.0.0.10.0.0.0.0.0">>,
+        <<"user_syslog.dm_message_id_filter = 2035.7.20.0.2.193.0.0.12.0.0.0.0.0.0.2.0.0.0.0.0.0.0.0.0.0.0.10.0.0.0.0.0">>
+    ] ++ smp_core_lines(IMEI),
+    iolist_to_binary([lists:join(<<"\n">>, Lines), <<"\n">>]).
+
+%% WM-E status read (0x0D): the same modem snapshot as wmr STAT, without the
+%% `STAT:' tag — plus certificate validity, RTC, UPTIME and SECSTAT.
+status_blob(IMEI) ->
+    Lines = smp_core_lines(IMEI) ++ [
+        <<"emeter.ca.validity = 2026-05-19 08:38:07;2032-08-06 15:24:56">>,
+        <<"config.ca.validity = 2026-05-19 08:38:07;2032-08-06 15:24:56">>,
+        <<"crl.validity = 0000-00-00 00:00:00;0000-00-00 00:00:00">>,
+        <<"RTC:", (rtc_utc())/binary>>,
+        uptime_line(IMEI),
+        secstat_line(IMEI)
+    ],
+    iolist_to_binary([lists:join(<<"\n">>, Lines), <<"\n">>]).
+
+%% Shared modem identity / radio snapshot used by config and status reads.
+smp_core_lines(IMEI) ->
+    {Rssi, Sinr, Rsrq, Rsrp} = signal(IMEI),
+    OsVersion = iolist_to_binary(
+        io_lib:format("smp.os_version = EC200A EC200AEUHAR01A30M16 OPERATOR=21601 "
+                      "NET=21601,7 STATUS=1 IP=172.31.158.137 RSSI=~b TXPWR=0 "
+                      "CID=71937 SINR=~b ECIO=0 RSRQ=~b RSRP=~b",
+                      [Rssi, Sinr, Rsrq, Rsrp])),
+    [
         <<"smp.firmware_version = 5.3.61.0">>,
         OsVersion,
         <<"smp.revision_id = WM-E1S WM-E1S 3.2.6">>,
@@ -143,11 +163,23 @@ full_config(IMEI) ->
         <<"smp.lte_bands = 3">>,
         <<"smp.battery = 4200, CAPACITY = 100">>,
         <<"smp.engineID = 0x8000CBCE03", (engine_tail(IMEI))/binary>>
-    ],
-    iolist_to_binary([lists:join(<<"\n">>, Lines), <<"\n">>]).
+    ].
 
-status_blob(IMEI) ->
-    iolist_to_binary(["WME-STATUS imei=", IMEI, " state=online\n"]).
+uptime_line(IMEI) ->
+    Uptime = (1 + erlang:phash2(IMEI) rem 864000) / 100.0,
+    iolist_to_binary(io_lib:format("UPTIME:~.2f", [Uptime])).
+
+secstat_line(IMEI) ->
+    P = dmd_config:get(dmd_agent, secstat_probability, 1.0),
+    Threshold = trunc(P * 100),
+    Value = case erlang:phash2(IMEI) rem 100 < Threshold of true -> 1; false -> 0 end,
+    <<"SECSTAT:", (integer_to_binary(Value))/binary>>.
+
+rtc_utc() ->
+    {{Y, Mo, D}, {H, Mi, S}} = calendar:universal_time(),
+    iolist_to_binary(
+      io_lib:format("~4..0b-~2..0b-~2..0bT~2..0b:~2..0b:~2..0b+00:00",
+                    [Y, Mo, D, H, Mi, S])).
 
 %% Deterministic per-device signal levels within typical LTE ranges.
 signal(IMEI) ->

@@ -7,10 +7,10 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="${IMAGE:-dmd-sim:latest}"
-WMR="${1:-8000}"
-WME="${2:-2000}"
-DUR="${3:-40}"
-PERIOD="${4:-10}"
+WMR="${1:-0}"
+WME="${2:-60000}"
+DUR="${3:-300}"
+PERIOD="${4:-60}"
 
 docker build -t "$IMAGE" "$ROOT"
 mkdir -p "$ROOT/log"
