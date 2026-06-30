@@ -70,11 +70,19 @@ SECLOG:<188>Jun 29 18:00:32 WM-E1S sec[21749]: certificate validation succeeded
 <34>Jun 29 18:00:32 WM-E1S tamper[4021]: enclosure cover opened
 ```
 
-**STAT → SECLOG chain:** a STAT body ends with `SECSTAT:1` with probability
-`secstat_probability` (default `1.0`), otherwise `SECSTAT:0`. When the server's
-on-CALL STAT completes and reports `SECSTAT:1`, it immediately follows up with a
-`SECLOG` to fetch the device's security events. The chain shows in
-`log/mgmt.log` as `cmd=stat reason=on_call` then `cmd=seclog reason=secstat`.
+**On-CALL polling (per device type):** every device sends the periodic CALL.
+When the server receives one it looks the IMEI up in the registry and acts on
+the device's `DeviceType`:
+
+- **wmr (1):** sends a `STAT`. If the STAT body reports `SECSTAT:1` (probability
+  `secstat_probability`, default `1.0`), it immediately follows up with a
+  `SECLOG` — shown in `log/mgmt.log` as `cmd=stat reason=on_call` then
+  `cmd=seclog reason=secstat`.
+- **wme (2):** performs a WM-E **status read** (option `0x0D`) — shown as
+  `WME read cmd=status … reason=on_call`.
+
+(Gated by `stat_on_call`; both run off the CALL handler so the CALL ack isn't
+delayed.)
 
 ## Device inventory CSV
 

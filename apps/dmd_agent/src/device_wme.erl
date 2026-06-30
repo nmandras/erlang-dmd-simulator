@@ -20,13 +20,7 @@ ident(_IMEI) ->
 %% A realistic WM-E configuration dump. Device-specific fields (modem IMEI,
 %% engine id, signal levels) are derived from the IMEI so reads are stable.
 full_config(IMEI) ->
-    {Rssi, Sinr, Rsrq, Rsrp} = signal(IMEI),
-    OsVersion = iolist_to_binary(
-        io_lib:format("smp.os_version = EC200A EC200AEUHAR01A30M16 OPERATOR=21601 "
-                      "NET=21601,7 STATUS=1 IP=172.31.158.137 RSSI=~b TXPWR=0 "
-                      "CID=71937 SINR=~b ECIO=0 RSRQ=~b RSRP=~b",
-                      [Rssi, Sinr, Rsrq, Rsrp])),
-    Lines = [
+    ConfigLines = [
         <<"conn.apn_name = wm2m">>,
         <<"conn.apn_user = xxxxxxxx">>,
         <<"conn.apn_pass = xxxxxxxx">>,
@@ -132,22 +126,32 @@ full_config(IMEI) ->
         <<"user_syslog.category_id_filter = 105398939">>,
         <<"user_syslog.message_id_filter = 65535.30.0.8191.255.0.0.255.0.1.0.0.0.0.4.0.0.0.0.4.0.0.4.0.0.1.2.0.0.0.0.0">>,
         <<"user_syslog.dm_category_id_filter = 67649691">>,
-        <<"user_syslog.dm_message_id_filter = 2035.7.20.0.2.193.0.0.12.0.0.0.0.0.0.2.0.0.0.0.0.0.0.0.0.0.0.10.0.0.0.0.0">>,
-        <<"smp.firmware_version = 5.3.61.0">>,
-        OsVersion,
-        <<"smp.revision_id = WM-E1S WM-E1S 3.2.6">>,
-        <<"smp.modem_sn = 142588346492215954">>,
-        <<"smp.modem_imei = ", IMEI/binary, ", ICC = 8936200000550566520F">>,
-        <<"smp.sim_imsi = 216012055056652">>,
-        <<"smp.vendor = WM Systems LLC.">>,
-        <<"smp.lte_bands = 3">>,
-        <<"smp.battery = 4200, CAPACITY = 100">>,
-        <<"smp.engineID = 0x8000CBCE03", (engine_tail(IMEI))/binary>>
+        <<"user_syslog.dm_message_id_filter = 2035.7.20.0.2.193.0.0.12.0.0.0.0.0.0.2.0.0.0.0.0.0.0.0.0.0.0.10.0.0.0.0.0">>
     ],
-    iolist_to_binary([lists:join(<<"\n">>, Lines), <<"\n">>]).
+    iolist_to_binary([lists:join(<<"\n">>, ConfigLines ++ smp_lines(IMEI)), <<"\n">>]).
 
+%% Device status block (WM-E read option 0x0D): the live smp.* fields, with
+%% IMEI-derived modem id / engine id / signal levels.
 status_blob(IMEI) ->
-    iolist_to_binary(["WME-STATUS imei=", IMEI, " state=online\n"]).
+    iolist_to_binary([lists:join(<<"\n">>, smp_lines(IMEI)), <<"\n">>]).
+
+smp_lines(IMEI) ->
+    {Rssi, Sinr, Rsrq, Rsrp} = signal(IMEI),
+    OsVersion = iolist_to_binary(
+        io_lib:format("smp.os_version = EC200A EC200AEUHAR01A30M16 OPERATOR=21601 "
+                      "NET=21601,7 STATUS=1 IP=172.31.158.137 RSSI=~b TXPWR=0 "
+                      "CID=71937 SINR=~b ECIO=0 RSRQ=~b RSRP=~b",
+                      [Rssi, Sinr, Rsrq, Rsrp])),
+    [<<"smp.firmware_version = 5.3.61.0">>,
+     OsVersion,
+     <<"smp.revision_id = WM-E1S WM-E1S 3.2.6">>,
+     <<"smp.modem_sn = 142588346492215954">>,
+     <<"smp.modem_imei = ", IMEI/binary, ", ICC = 8936200000550566520F">>,
+     <<"smp.sim_imsi = 216012055056652">>,
+     <<"smp.vendor = WM Systems LLC.">>,
+     <<"smp.lte_bands = 3">>,
+     <<"smp.battery = 4200, CAPACITY = 100">>,
+     <<"smp.engineID = 0x8000CBCE03", (engine_tail(IMEI))/binary>>].
 
 %% Deterministic per-device signal levels within typical LTE ranges.
 signal(IMEI) ->

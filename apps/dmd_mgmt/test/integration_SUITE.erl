@@ -8,14 +8,15 @@
 -export([all/0, init_per_suite/1, end_per_suite/1]).
 -export([calls_logged/1, command_works/1, reboot_command/1, driver_runs/1,
          unknown_device/1, metrics_collected/1, call_triggers_stat/1,
-         seclog_command/1, stat_triggers_seclog/1, wme_config_read/1]).
+         seclog_command/1, stat_triggers_seclog/1, wme_config_read/1,
+         wme_status_on_call/1]).
 
 -define(MGMT_PORT, 5055).
 
 all() ->
     [calls_logged, command_works, reboot_command, seclog_command,
      wme_config_read, call_triggers_stat, stat_triggers_seclog,
-     driver_runs, unknown_device, metrics_collected].
+     wme_status_on_call, driver_runs, unknown_device, metrics_collected].
 
 init_per_suite(Config) ->
     Priv = ?config(priv_dir, Config),
@@ -99,6 +100,16 @@ wme_config_read(_Config) ->
     {ok, Expected} = device_wme:config_blob(IMEI, 16#FF),
     ?assertEqual(Expected, Blob),
     ?assert(byte_size(Blob) > 256),  %% spans multiple V1 packets
+    ok.
+
+%% A CALL from a wme device makes the server trigger a WM-E status read (not a
+%% STAT), identified by the device type in the registry.
+wme_status_on_call(Config) ->
+    ok = wait_until(fun() ->
+        #{counters := C} = dmd_metrics:snapshot(dmd_mgmt),
+        maps:get(wme_status_triggered, C, 0) > 0
+    end, 100),
+    ok = wait_file(?config(mgmt_log, Config), <<"WME read cmd=status">>),
     ok.
 
 %% SECLOG returns 1..5 syslog-format security event lines.

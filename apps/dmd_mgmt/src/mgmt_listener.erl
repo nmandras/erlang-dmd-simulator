@@ -65,7 +65,7 @@ handle_conn(Sock) ->
                            dmd_metrics:incr(dmd_mgmt, calls_received),
                            logger:info("CALL recv imei=~s ip=~s", [IMEI, IP], ?DOMAIN),
                            mgmt_registry:touch(IMEI, IP, online),
-                           maybe_stat_on_call(IMEI),
+                           act_on_call(IMEI),
                            dmd_proto:encode_response(call, 0);
                        _ ->
                            logger:warning("bad request: ~p", [Payload], ?DOMAIN),
@@ -79,18 +79,35 @@ handle_conn(Sock) ->
 
 %% On each CALL, the server polls the device by issuing a STAT back to it
 %% (asynchronously, so the CALL response is not delayed). Gated by config, and
-%% only for wmr (type 1) devices — wme devices have no text command listener.
-maybe_stat_on_call(IMEI) ->
-    case dmd_config:get(dmd_mgmt, stat_on_call, true) andalso is_wmr(IMEI) of
-        true ->
-            dmd_metrics:incr(dmd_mgmt, call_triggered_stat),
-            mgmt_commander:send_async(IMEI, stat, on_call);
+%% the device type recorded for the IMEI: wmr (1) -> poll with a STAT command;
+%% wme (2) -> trigger a WM-E status read. Gated by the stat_on_call config.
+act_on_call(IMEI) ->
+    case dmd_config:get(dmd_mgmt, stat_on_call, true) of
         false ->
-            ok
+            ok;
+        true ->
+            case mgmt_registry:lookup(IMEI) of
+                {ok, #{device_type := 2, ip := IP, port := Port}} ->
+                    trigger_wme_status(IMEI, IP, Port);
+                _ ->
+                    %% wmr (or unknown): STAT, which chains to SECLOG on SECSTAT:1
+                    dmd_metrics:incr(dmd_mgmt, call_triggered_stat),
+                    mgmt_commander:send_async(IMEI, stat, on_call)
+            end
     end.
 
-is_wmr(IMEI) ->
-    case mgmt_registry:lookup(IMEI) of
-        {ok, #{device_type := Type}} -> Type =:= 1;
-        _ -> true
-    end.
+%% Read the wme device's status over WM-E, off the CALL handler so the CALL
+%% response is not delayed. Traceable in the log and via a metric.
+trigger_wme_status(IMEI, IP, Port) ->
+    dmd_metrics:incr(dmd_mgmt, wme_status_triggered),
+    spawn(fun() ->
+        Result = wme_client:read_config(IP, Port, 16#0D, 5000),
+        logger:info("WME read cmd=status imei=~s reason=on_call result=~s",
+                    [IMEI, summarise(Result)], ?DOMAIN)
+    end),
+    ok.
+
+summarise({ok, Bin}) when is_binary(Bin) ->
+    io_lib:format("ok,~b bytes", [byte_size(Bin)]);
+summarise(Other) ->
+    io_lib:format("~p", [Other]).
