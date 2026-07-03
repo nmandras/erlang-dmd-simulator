@@ -67,7 +67,7 @@ handle_conn(Sock, Sup) ->
 
 %% A device only ever receives commands; a stray CALL is treated as unknown.
 to_command({command, Cmd}) -> Cmd;
-to_command({call, _, _}) -> {unknown, <<"CALL">>};
+to_command({call, _, _, _}) -> {unknown, <<"CALL">>};
 to_command({error, _}) -> {unknown, <<>>}.
 
 %% Returns {Code, Payload}; the handlers build the full response bytes.

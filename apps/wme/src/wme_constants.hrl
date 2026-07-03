@@ -18,7 +18,7 @@
 
 %% Read option bytes
 -define(OPT_CONFIG, 16#FF).
--define(OPT_STATUS, 16#0D).
+-define(OPT_STATUS, 16#0A).  %% WM_E_STATUS_READ (legacy docs also list 16#0D)
 -define(OPT_METER,  16#0B).
 
 %% Chunk sizes
@@ -28,7 +28,6 @@
 %% IEC identification (Phase A)
 -define(IEC_PROBE, <<"/?99999999!\r\n">>).
 -define(IEC_ACK,   <<16#06, "059\r\n">>).
--define(IEC_059,   <<"059\r\n">>).
 
 %% Device error prefix (e.g. 15 45 32 = E2)
 -define(WME_DEVICE_ERR, 16#15).

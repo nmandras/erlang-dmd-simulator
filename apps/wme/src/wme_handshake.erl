@@ -22,14 +22,14 @@ client(Sock, Timeout) ->
             Err
     end.
 
-%% Device (simulator): read probe, send ident, read ack, send 059.
+%% Device (simulator): read probe, send ident, read ack, echo ack (06 + 059).
 -spec server(gen_tcp:socket(), binary(), timeout()) -> ok | {error, term()}.
 server(Sock, Ident, Timeout) ->
     case wme_transport:recv_line(Sock, Timeout) of
         {ok, _Probe} ->
             ok = wme_transport:send(Sock, Ident),
             case wme_transport:recv_line(Sock, Timeout) of
-                {ok, _Ack} -> wme_transport:send(Sock, ?IEC_059);
+                {ok, _Ack} -> wme_transport:send(Sock, ?IEC_ACK);
                 Err -> Err
             end;
         Err ->

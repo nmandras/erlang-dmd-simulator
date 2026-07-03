@@ -9,7 +9,7 @@
 %% Provider for wme_sim_device: option byte -> blob.
 -spec config_blob(binary(), byte()) -> {ok, binary()} | error.
 config_blob(IMEI, 16#FF) -> {ok, full_config(IMEI)};
-config_blob(IMEI, 16#0D) -> {ok, status_blob(IMEI)};
+config_blob(IMEI, Opt) when Opt =:= 16#0A; Opt =:= 16#0D -> {ok, status_blob(IMEI)};
 config_blob(_IMEI, _Other) -> error.
 
 %% IEC ident line for this device (V1 chunking; no "1K"/"1024" marker), matching

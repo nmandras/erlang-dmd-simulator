@@ -6,7 +6,7 @@
 -export([chunk_size/1, detect_version/1,
          start_read/1, parse_read_header/2,
          read_packet/1, parse_read_packet/2,
-         build_read_header/2, build_read_packet/3,
+         build_read_header/2, build_read_header/3, build_read_packet/3,
          start_syslog_read/2, parse_syslog_header/1,
          build_syslog_header/1]).
 
@@ -36,7 +36,7 @@ start_read(Option) ->
 %% Parse the 10-byte 0x68 response -> #{size, fletcher, packets}.
 -spec parse_read_header(binary(), pos_integer()) ->
           {ok, map()} | {error, term()}.
-parse_read_header(<<?WME_H1, ?WME_H2, ?CMD_READ_HDR, 16#FF, 16#FF,
+parse_read_header(<<?WME_H1, ?WME_H2, ?CMD_READ_HDR, 16#FF, _Option,
                     SzMSB, SzLSB, FlMSB, FlLSB, Chk>> = Frame, Chunk) ->
     case wme_checksum:xor_checksum(Frame, 2, -1) of
         Chk ->
@@ -104,12 +104,17 @@ parse_syslog_header(_Other) ->
 %% Device side (simulator)
 %%====================================================================
 
-%% Build the 0x68 start-read response for a blob.
+%% Build the 0x68 start-read response for a blob. Echoes the read option at
+%% byte index 4 (0xFF for full config, 0x0A for status, etc.).
 -spec build_read_header(binary(), pos_integer()) -> binary().
 build_read_header(Blob, Chunk) ->
+    build_read_header(Blob, Chunk, 16#FF).
+
+-spec build_read_header(binary(), pos_integer(), byte()) -> binary().
+build_read_header(Blob, Chunk, Option) ->
     Size = byte_size(Blob),
     {FM, FL} = wme_checksum:fletcher16(Blob),
-    Inner = <<?CMD_READ_HDR, 16#FF, 16#FF, (Size div Chunk), (Size rem Chunk), FM, FL>>,
+    Inner = <<?CMD_READ_HDR, 16#FF, Option, (Size div Chunk), (Size rem Chunk), FM, FL>>,
     <<?WME_H1, ?WME_H2, Inner/binary, (wme_checksum:xor_checksum(Inner, 0, 0))>>.
 
 %% Build the 0x71 data frame for packet Index (zero-padded to Chunk).

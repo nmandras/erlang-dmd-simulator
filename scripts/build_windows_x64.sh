@@ -15,7 +15,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="$ROOT/dist/windows-x64"
-APPS=(dmd_common dmd_agent dmd_mgmt)
+APPS=(dmd_common wme dmd_agent dmd_mgmt)
 
 echo ">> Compiling (portable BEAM)..."
 ( cd "$ROOT" && rebar3 compile )
@@ -35,7 +35,23 @@ cp "$ROOT/config/sys.config" "$OUT/config/"
 cp "$ROOT/config/sys.tls.config" "$OUT/config/" 2>/dev/null || true
 cp "$ROOT/config/devices.csv" "$OUT/config/"
 
-PA='-pa "%ROOT%lib\dmd_common\ebin" "%ROOT%lib\dmd_agent\ebin" "%ROOT%lib\dmd_mgmt\ebin"'
+WIN_SCRIPTS="$ROOT/scripts/windows"
+if [ -d "$WIN_SCRIPTS" ]; then
+    for ps1 in Dmd-Common.ps1 Start-All.ps1 Start-Mgmt.ps1 Start-Agent.ps1 \
+               Add-LoopbackAliases.ps1 New-DeviceFleetCsv.ps1 Test-Prerequisites.ps1; do
+        [ -f "$WIN_SCRIPTS/$ps1" ] && cp "$WIN_SCRIPTS/$ps1" "$OUT/"
+    done
+    [ -f "$WIN_SCRIPTS/generate_devices.bat" ] && cp "$WIN_SCRIPTS/generate_devices.bat" "$OUT/"
+fi
+
+[ -f "$ROOT/scripts/generate_devices.escript" ] && cp "$ROOT/scripts/generate_devices.escript" "$OUT/"
+
+if [ -d "$ROOT/priv/certs" ]; then
+    mkdir -p "$OUT/priv/certs"
+    cp "$ROOT/priv/certs"/* "$OUT/priv/certs/" 2>/dev/null || true
+fi
+
+PA='-pa "%ROOT%lib\dmd_common\ebin" "%ROOT%lib\wme\ebin" "%ROOT%lib\dmd_agent\ebin" "%ROOT%lib\dmd_mgmt\ebin"'
 
 # Shared launcher prologue: resolve the dist root and cd into it so the relative
 # log/ and config/ paths in sys.config resolve correctly.
@@ -75,10 +91,17 @@ dmd simulator - Windows x64 distribution
 Requires Erlang/OTP for Windows x64 installed, with "erl" on PATH
 (https://www.erlang.org/downloads).
 
+Before first run, add loopback aliases for device IPs (elevated PowerShell):
+  powershell -ExecutionPolicy Bypass -File .\Add-LoopbackAliases.ps1
+(Only if Add-LoopbackAliases.ps1 is present; otherwise use netsh manually.)
+
 Run:
   start_all.bat     - management server + device fleet in one node
   start_mgmt.bat    - management server only
   start_agent.bat   - device fleet only
+
+Or PowerShell launchers (if copied into this folder):
+  Start-All.ps1, Start-Mgmt.ps1, Start-Agent.ps1
 
 Logs are written under log\ (agent.log, mgmt.log). Stopping the node
 (Ctrl+C, a) flushes a benchmarking report to each log file.

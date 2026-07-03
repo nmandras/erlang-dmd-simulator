@@ -31,7 +31,7 @@ loop(Sock, Chunk, Provider, SyslogProvider, Timeout, Blob) ->
         {ok, <<?WME_H1, ?WME_H2, ?CMD_START_READ, 16#FF, Option, _Chk>>} ->
             case Provider(Option) of
                 {ok, B} ->
-                    wme_transport:send(Sock, wme_codec:build_read_header(B, Chunk)),
+                    wme_transport:send(Sock, wme_codec:build_read_header(B, Chunk, Option)),
                     loop(Sock, Chunk, Provider, SyslogProvider, Timeout, B);
                 error ->
                     wme_transport:send(Sock, <<?WME_DEVICE_ERR, $E, $2>>),

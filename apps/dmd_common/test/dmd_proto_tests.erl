@@ -13,7 +13,13 @@ frame_length_test() ->
 call_round_trip_test() ->
     Bin = dmd_proto:encode_call(<<"101000000000001">>, {127,0,0,2}),
     ?assertEqual(<<"CALL:101000000000001,127.0.0.2">>, Bin),
-    ?assertEqual({call, <<"101000000000001">>, <<"127.0.0.2">>},
+    ?assertEqual({call, <<"101000000000001">>, <<"127.0.0.2">>, <<>>},
+                 dmd_proto:decode_request(Bin)).
+
+call_with_stat_round_trip_test() ->
+    Stat = <<"smp.firmware_version = 5.3.61.0\nSECSTAT:1\n">>,
+    Bin = dmd_proto:encode_call(<<"101000000000001">>, {127,0,0,2}, Stat),
+    ?assertEqual({call, <<"101000000000001">>, <<"127.0.0.2">>, Stat},
                  dmd_proto:decode_request(Bin)).
 
 command_decode_test() ->

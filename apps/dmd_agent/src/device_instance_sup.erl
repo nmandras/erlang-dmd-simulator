@@ -12,13 +12,12 @@ start_link(Spec) ->
 
 %% Every device runs the CALL client (device_agent); the inbound listener is
 %% chosen by DeviceType: 1 = wmr text protocol, 2 = WM-E protocol.
-init([#{imei := IMEI, ip := IP, port := Port,
-        period_ms := PeriodMs, device_type := DType}]) ->
+init([Spec = #{imei := IMEI, ip := IP, port := Port, device_type := DType}]) ->
     SupFlags = #{strategy => one_for_all, intensity => 5, period => 10},
     Children = [
         %% Agent first so it is up before the listener serves commands.
         #{id => agent,
-          start => {device_agent, start_link, [IMEI, IP, Port, PeriodMs]}},
+          start => {device_agent, start_link, [Spec]}},
         listener_child(DType, self(), IMEI, IP, Port)
     ],
     {ok, {SupFlags, Children}}.

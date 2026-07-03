@@ -61,11 +61,12 @@ handle_conn(Sock) ->
     case dmd_proto:read_msg(Sock, ?RECV_TIMEOUT) of
         {ok, Payload} ->
             Resp = case dmd_proto:decode_request(Payload) of
-                       {call, IMEI, IP} ->
+                       {call, IMEI, IP, Stat} ->
                            dmd_metrics:incr(dmd_mgmt, calls_received),
-                           logger:info("CALL recv imei=~s ip=~s", [IMEI, IP], ?DOMAIN),
+                           LogStat = case Stat of <<>> -> <<>>; _ -> <<", stat=", (integer_to_binary(byte_size(Stat)))/binary, " bytes">> end,
+                           logger:info("CALL recv imei=~s ip=~s~s", [IMEI, IP, LogStat], ?DOMAIN),
                            mgmt_registry:touch(IMEI, IP, online),
-                           act_on_call(IMEI),
+                           act_on_call(IMEI, Stat),
                            dmd_proto:encode_response(call, 0);
                        _ ->
                            logger:warning("bad request: ~p", [Payload], ?DOMAIN),
@@ -80,7 +81,27 @@ handle_conn(Sock) ->
 %% On each CALL, the server polls the device asynchronously (so the CALL
 %% response is not delayed). wmr devices get text STAT; wme devices get a WM-E
 %% status read — both keyed off IMEI + DeviceType in the registry.
-act_on_call(IMEI) ->
+act_on_call(IMEI, Stat) ->
+    case Stat of
+        <<>> ->
+            act_on_call_poll(IMEI);
+        _ ->
+            act_on_call_inline(IMEI, Stat)
+    end.
+
+%% Status already delivered in the CALL payload — skip the separate poll.
+act_on_call_inline(IMEI, Stat) ->
+    case mgmt_registry:lookup(IMEI) of
+        {ok, #{device_type := 2}} ->
+            dmd_metrics:incr(dmd_mgmt, wme_status_triggered),
+            logger:info("WME status in CALL imei=~s bytes=~b",
+                        [IMEI, byte_size(Stat)], ?DOMAIN),
+            maybe_chain_wme_syslog(IMEI, {ok, Stat});
+        _ ->
+            ok
+    end.
+
+act_on_call_poll(IMEI) ->
     case dmd_config:get(dmd_mgmt, stat_on_call, true) of
         false ->
             ok;

@@ -4,7 +4,8 @@
 %%% — the first two bytes give the payload length, least-significant byte first.
 %%%
 %%% Requests (payload):
-%%%   `CALL:<15-digit-IMEI>,<ip>'    agent -> server, periodic status
+%%%   `CALL:<15-digit-IMEI>,<ip>'              agent -> server, periodic status
+%%%   `CALL:<15-digit-IMEI>,<ip>\n<stat-body>'  optional inline status (WME)
 %%%   `STAT'                          server -> agent, ask for status
 %%%   `REBOOT'                        server -> agent, reboot
 %%%
@@ -14,7 +15,7 @@
 -module(dmd_proto).
 
 -export([frame/1, write_msg/2, read_msg/2]).
--export([encode_call/2, encode_command/1, decode_request/1,
+-export([encode_call/2, encode_call/3, encode_command/1, decode_request/1,
          encode_response/2, encode_response/3, decode_response/1, command_tag/1]).
 -export([valid_imei/1, ip_to_bin/1]).
 
@@ -49,8 +50,16 @@ read_msg(Transport, Timeout) ->
 %%====================================================================
 
 -spec encode_call(binary(), term()) -> binary().
-encode_call(IMEI, IP) when is_binary(IMEI) ->
-    <<"CALL:", IMEI/binary, ",", (ip_to_bin(IP))/binary>>.
+encode_call(IMEI, IP) ->
+    encode_call(IMEI, IP, <<>>).
+
+%% Stat body (when non-empty) is appended after a newline so commas inside
+%% status lines do not break IMEI/IP parsing.
+-spec encode_call(binary(), term(), binary()) -> binary().
+encode_call(IMEI, IP, <<>>) when is_binary(IMEI) ->
+    <<"CALL:", IMEI/binary, ",", (ip_to_bin(IP))/binary>>;
+encode_call(IMEI, IP, Stat) when is_binary(IMEI), is_binary(Stat) ->
+    <<"CALL:", IMEI/binary, ",", (ip_to_bin(IP))/binary, "\n", Stat/binary>>.
 
 -spec encode_command(stat | reboot | seclog) -> binary().
 encode_command(stat) -> <<"STAT">>;
@@ -58,13 +67,15 @@ encode_command(reboot) -> <<"REBOOT">>;
 encode_command(seclog) -> <<"SECLOG">>.
 
 -spec decode_request(binary()) ->
-          {call, binary(), binary()}
+          {call, binary(), binary(), binary()}
         | {command, stat | reboot | {unknown, binary()}}
         | {error, term()}.
 decode_request(<<"CALL:", Rest/binary>>) ->
-    case binary:split(Rest, <<",">>) of
-        [IMEI, IP] -> {call, IMEI, IP};
-        _ -> {error, malformed_call}
+    case binary:split(Rest, <<"\n">>, []) of
+        [Head] ->
+            parse_call_head(Head, <<>>);
+        [Head | Tail] ->
+            parse_call_head(Head, iolist_to_binary(lists:join(<<"\n">>, Tail)))
     end;
 decode_request(<<"STAT">>) -> {command, stat};
 decode_request(<<"REBOOT">>) -> {command, reboot};
@@ -132,6 +143,12 @@ cmd_name({config, _}) -> <<"CONFIG">>;
 cmd_name({firmware, _}) -> <<"FIRMWARE">>;
 cmd_name({unknown, _}) -> <<"ERR">>;
 cmd_name(Bin) when is_binary(Bin) -> Bin.
+
+parse_call_head(Head, Stat) ->
+    case binary:split(Head, <<",">>) of
+        [IMEI, IP] -> {call, IMEI, IP, Stat};
+        _ -> {error, malformed_call}
+    end.
 
 int_opt(Bin) ->
     try {ok, binary_to_integer(Bin)} catch _:_ -> error end.

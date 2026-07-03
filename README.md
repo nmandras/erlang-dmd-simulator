@@ -326,18 +326,44 @@ dmd_mgmt:driver_count().                     %% autonomous commands issued so fa
 dmd_agent:start_device(<<"101000000000011">>, {127,0,0,12}, 6000, 10000). %% add one
 ```
 
-## Windows x64 build
+## Windows x64 (no Docker)
 
 `.beam` output is portable bytecode, so a Linux/macOS build runs on Windows x64
-— only the runtime is native. Build a staged distribution with `.bat` launchers:
+— only the runtime is native.
+
+### On Windows Server (PowerShell)
+
+Install [Erlang/OTP for Windows x64](https://www.erlang.org/downloads) and
+[rebar3](https://www.rebar3.org), then from an elevated shell add loopback
+aliases for the device IPs in `config/devices.csv` (default `127.10.0.1`–
+`127.10.0.10`):
+
+```powershell
+cd scripts\windows
+powershell -ExecutionPolicy Bypass -File .\Test-Prerequisites.ps1
+powershell -ExecutionPolicy Bypass -File .\Add-LoopbackAliases.ps1
+powershell -ExecutionPolicy Bypass -File .\Build-WindowsDistribution.ps1
+cd ..\..\dist\windows-x64
+powershell -ExecutionPolicy Bypass -File .\Start-All.ps1
+```
+
+Run directly from a git checkout (compile + start in one step):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\windows\Start-All.ps1
+```
+
+Use `-Tls` for `config/sys.tls.config` (generate certs first). Stopping the
+node (Ctrl+C, `a`) flushes the metrics report to `log\`.
+
+### Cross-build from Linux/macOS
 
 ```sh
 ./scripts/build_windows_x64.sh        # -> dist/windows-x64/ and dist/dmd-windows-x64.zip
 ```
 
-Copy the folder to a Windows x64 machine that has Erlang/OTP for Windows
-installed (`erl` on PATH), then run `start_all.bat` (or `start_mgmt.bat` /
-`start_agent.bat`). Stopping the node flushes the metrics report to `log\`.
+Copy `dist/windows-x64` to a Windows machine with `erl` on PATH, add loopback
+aliases, then run `Start-All.ps1` or `start_all.bat`.
 
 ## TLS (optional)
 

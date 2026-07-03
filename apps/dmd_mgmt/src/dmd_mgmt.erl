@@ -48,7 +48,7 @@ wme_read_config(IMEI, Object) ->
     end.
 
 wme_option(config) -> 16#FF;
-wme_option(status) -> 16#0D;
+wme_option(status) -> 16#0A;
 wme_option(meter) -> 16#0B;
 wme_option(N) when is_integer(N) -> N.
 

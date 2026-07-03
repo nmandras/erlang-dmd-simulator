@@ -4,6 +4,7 @@
 
 start_read_test() ->
     ?assertEqual(<<16#1B,16#16,16#67,16#FF,16#FF,16#67>>, wme_codec:start_read(16#FF)),
+    ?assertEqual(<<16#1B,16#16,16#67,16#FF,16#0A,16#92>>, wme_codec:start_read(16#0A)),
     ?assertEqual(<<16#1B,16#16,16#67,16#FF,16#06,16#9E>>, wme_codec:start_read(16#06)),
     ?assertEqual(<<16#1B,16#16,16#67,16#FF,16#04,16#9C>>, wme_codec:start_read(16#04)).
 
@@ -17,7 +18,12 @@ parse_header_test() ->
     {ok, M} = wme_codec:parse_read_header(H, 256),
     ?assertEqual(2316, maps:get(size, M)),
     ?assertEqual(16#4BE9, maps:get(fletcher, M)),
-    ?assertEqual(10, maps:get(packets, M)).
+    ?assertEqual(10, maps:get(packets, M)),
+    %% Real-device status read header echoes option 0x0A at byte index 4.
+    StatusH = <<16#1B,16#16,16#68,16#FF,16#0A,16#02,16#C4,16#AC,16#DB,16#2C>>,
+    {ok, SM} = wme_codec:parse_read_header(StatusH, 256),
+    ?assertEqual(708, maps:get(size, SM)),
+    ?assertEqual(3, maps:get(packets, SM)).
 
 version_detect_test() ->
     ?assertEqual(v1, wme_codec:detect_version(<<"/ELS5\\3 5.3.59.0 118\r\n">>)),
@@ -25,9 +31,12 @@ version_detect_test() ->
 
 roundtrip_test() ->
     Blob = binary:copy(<<"x">>, 300),
-    {ok, M} = wme_codec:parse_read_header(wme_codec:build_read_header(Blob, 256), 256),
+    {ok, M} = wme_codec:parse_read_header(wme_codec:build_read_header(Blob, 256, 16#FF), 256),
     ?assertEqual(300, maps:get(size, M)),
     ?assertEqual(2, maps:get(packets, M)),
+    {ok, StatusM} = wme_codec:parse_read_header(
+                      wme_codec:build_read_header(Blob, 256, 16#0A), 256),
+    ?assertEqual(300, maps:get(size, StatusM)),
     {ok, 0, D0} = wme_codec:parse_read_packet(wme_codec:build_read_packet(Blob, 0, 256), 256),
     {ok, 1, D1} = wme_codec:parse_read_packet(wme_codec:build_read_packet(Blob, 1, 256), 256),
     ?assertEqual(256, byte_size(D0)),

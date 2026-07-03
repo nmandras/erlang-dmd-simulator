@@ -11,15 +11,15 @@
 -module(device_agent).
 -behaviour(gen_statem).
 
--export([start_link/4, handle_command/2]).
+-export([start_link/1, handle_command/2]).
 -export([init/1, callback_mode/0, terminate/3]).
 -export([running/3, rebooting/3]).
 
 -define(FIRST_CALL_DELAY, 500).
 -define(DOMAIN, #{domain => [dmd, agent]}).
 
-start_link(IMEI, IP, Port, PeriodMs) ->
-    gen_statem:start_link(?MODULE, [IMEI, IP, Port, PeriodMs], []).
+start_link(Spec) when is_map(Spec) ->
+    gen_statem:start_link(?MODULE, [Spec], []).
 
 callback_mode() -> state_functions.
 
@@ -29,11 +29,11 @@ callback_mode() -> state_functions.
 handle_command(Pid, Cmd) ->
     gen_statem:call(Pid, {command, Cmd}).
 
-init([IMEI, IP, Port, PeriodMs]) ->
-    Data = #{imei => IMEI, ip => IP, port => Port, period_ms => PeriodMs,
-             fw => <<"1.0.0">>, config_ver => 1,
-             boot_time => erlang:system_time(second),
-             state => running},
+init([#{period_ms := PeriodMs} = Spec]) ->
+    Data = Spec#{fw => <<"1.0.0">>,
+                  config_ver => 1,
+                  boot_time => erlang:system_time(second),
+                  state => running},
     {ok, running, Data, [{state_timeout, first_call_delay(PeriodMs), send_call}]}.
 
 %% Delay before the first CALL, per the configured dispatch strategy:
@@ -98,11 +98,12 @@ handle_common(_EventType, _Event, Data) ->
 terminate(_Reason, _State, _Data) -> ok.
 
 %% Periodic CALL client: short-lived connect/send/read/close, then log.
-send_call(#{imei := IMEI, ip := IP}) ->
+send_call(Data = #{imei := IMEI, ip := IP}) ->
     Host = dmd_config:mgmt_host(dmd_agent),
     Port = dmd_config:mgmt_port(dmd_agent),
     T0 = erlang:monotonic_time(millisecond),
-    Result = do_call(IMEI, IP, Host, Port),
+    Payload = call_payload(Data),
+    Result = do_call(Payload, Host, Port),
     Dt = erlang:monotonic_time(millisecond) - T0,
     record_call(Result, Dt),
     logger:info("CALL imei=~s ip=~s -> ~s:~b result=~p",
@@ -116,10 +117,10 @@ record_call({<<"CALL">>, 0, _}, Dt) ->
 record_call(_Other, _Dt) ->
     dmd_metrics:incr(dmd_agent, calls_sent_failed).
 
-do_call(IMEI, IP, Host, Port) ->
+do_call(Payload, Host, Port) ->
     case dmd_transport:connect(Host, Port, [], dmd_config:connect_tls(dmd_agent)) of
         {ok, Sock} ->
-            R = case dmd_proto:write_msg(Sock, dmd_proto:encode_call(IMEI, IP)) of
+            R = case dmd_proto:write_msg(Sock, Payload) of
                     ok ->
                         case dmd_proto:read_msg(Sock, 5000) of
                             {ok, Resp} -> dmd_proto:decode_response(Resp);
@@ -136,3 +137,12 @@ do_call(IMEI, IP, Host, Port) ->
 log_command(#{imei := IMEI}, Cmd, Code) ->
     dmd_metrics:incr(dmd_agent, commands_received),
     logger:info("CMD recv imei=~s cmd=~p code=~b", [IMEI, Cmd, Code], ?DOMAIN).
+
+%% WME devices with StatInCall=1 append the WM-E status blob to the CALL.
+call_payload(#{imei := IMEI, ip := IP, device_type := 2, stat_in_call := true}) ->
+    case device_wme:config_blob(IMEI, 16#0A) of
+        {ok, Stat} -> dmd_proto:encode_call(IMEI, IP, Stat);
+        error -> dmd_proto:encode_call(IMEI, IP)
+    end;
+call_payload(#{imei := IMEI, ip := IP}) ->
+    dmd_proto:encode_call(IMEI, IP).

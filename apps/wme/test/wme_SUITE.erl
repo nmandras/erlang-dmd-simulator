@@ -6,13 +6,15 @@
 -include_lib("stdlib/include/assert.hrl").
 
 -export([all/0]).
--export([read_roundtrip/1, unknown_option/1, syslog_roundtrip/1, syslog_empty/1]).
+-export([read_roundtrip/1, status_read_roundtrip/1, unknown_option/1,
+         syslog_roundtrip/1, syslog_empty/1]).
 
 -define(IP, {127,0,0,1}).
 -define(IDENT, <<"/ELS5\\3 5.3.59.0 118\r\n">>).
 
 all() ->
-    [read_roundtrip, unknown_option, syslog_roundtrip, syslog_empty].
+    [read_roundtrip, status_read_roundtrip, unknown_option,
+     syslog_roundtrip, syslog_empty].
 
 read_roundtrip(_Config) ->
     Port = 19998,
@@ -20,11 +22,18 @@ read_roundtrip(_Config) ->
     start_server(Port, fun(16#FF) -> {ok, Blob}; (_) -> error end),
     ?assertEqual({ok, Blob}, wme_client:read_config(?IP, Port, 16#FF, 5000)).
 
+status_read_roundtrip(_Config) ->
+    Port = 19995,
+    IMEI = <<"101000000000009">>,
+    {ok, Expected} = device_wme:config_blob(IMEI, 16#0A),
+    start_server(Port, fun(Opt) -> device_wme:config_blob(IMEI, Opt) end),
+    ?assertEqual({ok, Expected}, wme_client:read_config(?IP, Port, 16#0A, 5000)).
+
 unknown_option(_Config) ->
     Port = 19999,
     start_server(Port, fun(16#FF) -> {ok, <<"cfg">>}; (_) -> error end),
     %% An unsupported option yields a device error, surfaced as an error tuple.
-    ?assertMatch({error, _}, wme_client:read_config(?IP, Port, 16#0D, 1000)).
+    ?assertMatch({error, _}, wme_client:read_config(?IP, Port, 16#99, 1000)).
 
 syslog_roundtrip(_Config) ->
     Port = 19997,
@@ -48,13 +57,23 @@ syslog_empty(_Config) ->
 start_server(Port, Provider) ->
     start_server(Port, Provider, fun() -> empty end).
 
+start_server(Port, Provider, SyslogProvider) when is_function(Provider, 1) ->
+    start_server(Port, Provider, SyslogProvider, ?IDENT);
+
 start_server(Port, Provider, SyslogProvider) ->
+    start_server(Port, Provider, SyslogProvider, ?IDENT).
+
+start_server(Port, Provider, SyslogProvider, Ident) when is_function(Provider, 2) ->
+    Wrapped = fun(Option) -> Provider(Ident, Option) end,
+    start_server(Port, Wrapped, SyslogProvider, Ident);
+
+start_server(Port, Provider, SyslogProvider, Ident) ->
     Parent = self(),
     spawn(fun() ->
         {ok, LSock} = wme_transport:listen(Port, ?IP),
         Parent ! ready,
         {ok, Sock} = wme_transport:accept(LSock),
-        wme_sim_device:serve(Sock, ?IDENT, 256, Provider, SyslogProvider, 5000),
+        wme_sim_device:serve(Sock, Ident, 256, Provider, SyslogProvider, 5000),
         wme_transport:close(Sock),
         wme_transport:close(LSock)
     end),
