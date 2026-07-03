@@ -51,8 +51,20 @@ first_call_delay(PeriodMs) ->
 %%====================================================================
 
 running(state_timeout, send_call, Data) ->
-    send_call(Data),
-    {keep_state, Data, [{state_timeout, maps:get(period_ms, Data), send_call}]};
+    PeriodMs = maps:get(period_ms, Data),
+    case dmd_conn_limit:try_acquire(dmd_agent) of
+        ok ->
+            try
+                send_call(Data)
+            after
+                dmd_conn_limit:release(dmd_agent)
+            end,
+            {keep_state, Data, [{state_timeout, PeriodMs, send_call}]};
+        throttled ->
+            dmd_metrics:incr(dmd_agent, calls_throttled),
+            Backoff = min(PeriodMs, 250 + rand:uniform(750)),
+            {keep_state, Data, [{state_timeout, Backoff, send_call}]}
+    end;
 running({call, From}, {command, Cmd}, Data) ->
     {Code, RespData, Action} = device_cmd:handle(Cmd, Data),
     log_command(Data, Cmd, Code),
@@ -140,7 +152,7 @@ log_command(#{imei := IMEI}, Cmd, Code) ->
 
 %% WME devices with StatInCall=1 append the WM-E status blob to the CALL.
 call_payload(#{imei := IMEI, ip := IP, device_type := 2, stat_in_call := true}) ->
-    case device_wme:config_blob(IMEI, 16#0A) of
+    case device_wme:config_blob(IMEI, IP, 16#0A) of
         {ok, Stat} -> dmd_proto:encode_call(IMEI, IP, Stat);
         error -> dmd_proto:encode_call(IMEI, IP)
     end;

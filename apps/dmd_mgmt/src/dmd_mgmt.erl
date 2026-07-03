@@ -40,6 +40,9 @@ driver_count() -> mgmt_driver:count().
 -spec wme_read_config(binary(), config | status | meter | byte()) ->
           {ok, binary()} | {error, term()}.
 wme_read_config(IMEI, Object) ->
+    dmd_conn_limit:with(dmd_mgmt, fun() -> wme_read_config1(IMEI, Object) end).
+
+wme_read_config1(IMEI, Object) ->
     case mgmt_registry:lookup(IMEI) of
         {ok, #{ip := IP, port := Port}} ->
             wme_client:read_config(IP, Port, wme_option(Object), 30000);
@@ -59,6 +62,9 @@ wme_read_syslog(IMEI) ->
 
 -spec wme_read_syslog(binary(), non_neg_integer()) -> {ok, binary()} | {error, term()}.
 wme_read_syslog(IMEI, Count) ->
+    dmd_conn_limit:with(dmd_mgmt, fun() -> wme_read_syslog1(IMEI, Count) end).
+
+wme_read_syslog1(IMEI, Count) ->
     case mgmt_registry:lookup(IMEI) of
         {ok, #{ip := IP, port := Port}} ->
             wme_client:read_syslog(IP, Port, Count, 30000);

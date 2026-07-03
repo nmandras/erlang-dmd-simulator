@@ -15,13 +15,16 @@ start_link(IMEI, IP, Port) ->
 init([IMEI, IP, Port]) ->
     process_flag(trap_exit, true),
     {ok, LSock} = wme_transport:listen(Port, IP),
-    {ok, #{lsock => LSock, acceptor => spawn_acceptor(LSock, IMEI), imei => IMEI}}.
+    {ok, #{lsock => LSock, acceptor => spawn_acceptor(LSock, IMEI, IP),
+           imei => IMEI, ip => IP}}.
 
 handle_call(_Req, _From, S) -> {reply, ok, S}.
 handle_cast(_Msg, S) -> {noreply, S}.
 
-handle_info({'EXIT', Pid, _Reason}, S = #{acceptor := Pid, lsock := LSock, imei := IMEI}) ->
-    {noreply, S#{acceptor => spawn_acceptor(LSock, IMEI)}};
+handle_info({'EXIT', Pid, _Reason},
+            S = #{acceptor := Pid, lsock := LSock, imei := IMEI}) ->
+    IP = maps:get(ip, S, {127, 10, 0, 1}),
+    {noreply, S#{acceptor => spawn_acceptor(LSock, IMEI, IP)}};
 handle_info(_Info, S) -> {noreply, S}.
 
 terminate(_Reason, #{lsock := LSock}) ->
@@ -32,14 +35,14 @@ terminate(_Reason, #{lsock := LSock}) ->
 %% Acceptor
 %%====================================================================
 
-spawn_acceptor(LSock, IMEI) ->
-    spawn_link(fun() -> accept_loop(LSock, IMEI) end).
+spawn_acceptor(LSock, IMEI, IP) ->
+    spawn_link(fun() -> accept_loop(LSock, IMEI, IP) end).
 
-accept_loop(LSock, IMEI) ->
+accept_loop(LSock, IMEI, IP) ->
     case wme_transport:accept(LSock) of
         {ok, Sock} ->
             Ident = device_wme:ident(IMEI),
-            Provider = fun(Option) -> device_wme:config_blob(IMEI, Option) end,
+            Provider = fun(Option) -> device_wme:config_blob(IMEI, IP, Option) end,
             SyslogProvider = fun() -> {ok, device_wme:syslog_blob(IMEI)} end,
             Pid = spawn(fun() ->
                 receive go ->
@@ -51,9 +54,9 @@ accept_loop(LSock, IMEI) ->
                 ok -> Pid ! go;
                 _ -> wme_transport:close(Sock)
             end,
-            accept_loop(LSock, IMEI);
+            accept_loop(LSock, IMEI, IP);
         {error, closed} ->
             ok;
         {error, _Other} ->
-            accept_loop(LSock, IMEI)
+            accept_loop(LSock, IMEI, IP)
     end.

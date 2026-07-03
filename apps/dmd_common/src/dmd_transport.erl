@@ -19,7 +19,7 @@
 %% itself must not do any packet framing.
 base_opts() ->
     [binary, {packet, raw}, {active, false}, {reuseaddr, true},
-     {nodelay, true}, {backlog, 1024}].
+     {nodelay, true}, {backlog, 4096}].
 
 -spec listen(inet:port_number(), [gen_tcp:listen_option()], tls_arg()) ->
           {ok, socket()} | {error, term()}.

@@ -25,9 +25,15 @@ read_roundtrip(_Config) ->
 status_read_roundtrip(_Config) ->
     Port = 19995,
     IMEI = <<"101000000000009">>,
-    {ok, Expected} = device_wme:config_blob(IMEI, 16#0A),
-    start_server(Port, fun(Opt) -> device_wme:config_blob(IMEI, Opt) end),
-    ?assertEqual({ok, Expected}, wme_client:read_config(?IP, Port, 16#0A, 5000)).
+    DevIP = {127, 10, 0, 9},
+    start_server(Port, fun(Opt) -> device_wme:config_blob(IMEI, DevIP, Opt) end),
+    {ok, Blob} = wme_client:read_config(?IP, Port, 16#0A, 5000),
+    ?assertNotEqual(nomatch, binary:match(Blob, <<"IP=127.10.0.9">>)),
+    ?assertNotEqual(nomatch, binary:match(Blob, <<"RSSI=">>)),
+    ?assertNotEqual(nomatch, binary:match(Blob, <<"SINR=">>)),
+    ?assertNotEqual(nomatch, binary:match(Blob, <<"RSRQ=">>)),
+    ?assertNotEqual(nomatch, binary:match(Blob, <<"RSRP=">>)),
+    ok.
 
 unknown_option(_Config) ->
     Port = 19999,

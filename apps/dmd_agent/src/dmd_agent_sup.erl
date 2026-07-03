@@ -10,6 +10,8 @@ start_link() ->
 init([]) ->
     SupFlags = #{strategy => one_for_one, intensity => 10, period => 10},
     Children = [
+        #{id => conn_limit,
+          start => {dmd_conn_limit, start_link, [dmd_agent]}},
         %% Metrics first so it shuts down last and can report on termination.
         #{id => dmd_metrics,
           start => {dmd_metrics, start_link, [dmd_agent, [dmd, agent]]}},

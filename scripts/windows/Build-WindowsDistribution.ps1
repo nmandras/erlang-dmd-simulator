@@ -61,6 +61,7 @@ foreach ($app in $DmdAppOrder) {
 }
 
 Copy-Item -LiteralPath (Join-Path $root 'config\sys.config') -Destination $configDir -Force
+Copy-Item -LiteralPath (Join-Path $root 'config\sys.scale.config') -Destination $configDir -Force
 Copy-Item -LiteralPath (Join-Path $root 'config\devices.csv') -Destination $configDir -Force
 $tlsConfig = Join-Path $root 'config\sys.tls.config'
 if (Test-Path -LiteralPath $tlsConfig) {
@@ -80,6 +81,7 @@ $launcherNames = @(
     'Start-Mgmt.ps1',
     'Start-Agent.ps1',
     'Add-LoopbackAliases.ps1',
+    'Set-WindowsTcpTuning.ps1',
     'New-DeviceFleetCsv.ps1',
     'generate_devices.bat',
     'Test-Prerequisites.ps1'

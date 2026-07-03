@@ -1,16 +1,21 @@
 %%% @doc Per-device WM-E config content. Generates a realistic device config
 %%% blob (key = value lines, as a real WM-E modem returns for a 0xFF read) and a
-%%% modem-style status blob for a 0x0D read, derived deterministically from the
-%%% device IMEI.
+%%% modem-style status blob for a 0x0D read, with radio levels randomised on
+%%% each read and the device IP embedded in the modem snapshot.
 -module(device_wme).
 
--export([config_blob/2, ident/1, syslog_blob/1]).
+-export([config_blob/2, config_blob/3, ident/1, syslog_blob/1]).
 
 %% Provider for wme_sim_device: option byte -> blob.
 -spec config_blob(binary(), byte()) -> {ok, binary()} | error.
-config_blob(IMEI, 16#FF) -> {ok, full_config(IMEI)};
-config_blob(IMEI, Opt) when Opt =:= 16#0A; Opt =:= 16#0D -> {ok, status_blob(IMEI)};
-config_blob(_IMEI, _Other) -> error.
+config_blob(IMEI, Opt) when is_binary(IMEI) ->
+    config_blob(IMEI, {127, 10, 0, 1}, Opt).
+
+-spec config_blob(binary(), inet:ip4_address(), byte()) -> {ok, binary()} | error.
+config_blob(IMEI, IP, 16#FF) -> {ok, full_config(IMEI, IP)};
+config_blob(IMEI, IP, Opt) when Opt =:= 16#0A; Opt =:= 16#0D ->
+    {ok, status_blob(IMEI, IP)};
+config_blob(_IMEI, _IP, _Other) -> error.
 
 %% IEC ident line for this device (V1 chunking; no "1K"/"1024" marker), matching
 %% a real WM-E1S unit: /ELS<baud>\<hw> <firmware> <hw_id>.
@@ -20,7 +25,7 @@ ident(_IMEI) ->
 
 %% A realistic WM-E configuration dump. Device-specific fields (modem IMEI,
 %% engine id, signal levels) are derived from the IMEI so reads are stable.
-full_config(IMEI) ->
+full_config(IMEI, IP) ->
     ConfigLines = [
         <<"conn.apn_name = wm2m">>,
         <<"conn.apn_user = xxxxxxxx">>,
@@ -129,12 +134,12 @@ full_config(IMEI) ->
         <<"user_syslog.dm_category_id_filter = 67649691">>,
         <<"user_syslog.dm_message_id_filter = 2035.7.20.0.2.193.0.0.12.0.0.0.0.0.0.2.0.0.0.0.0.0.0.0.0.0.0.10.0.0.0.0.0">>
     ],
-    iolist_to_binary([lists:join(<<"\n">>, ConfigLines ++ smp_lines(IMEI)), <<"\n">>]).
+    iolist_to_binary([lists:join(<<"\n">>, ConfigLines ++ smp_lines(IMEI, IP)), <<"\n">>]).
 
 %% WM-E status read (0x0D): the same modem snapshot as wmr STAT, without the
 %% `STAT:' tag — plus certificate validity, RTC, UPTIME and SECSTAT.
-status_blob(IMEI) ->
-    Lines = smp_lines(IMEI) ++ [
+status_blob(IMEI, IP) ->
+    Lines = smp_lines(IMEI, IP) ++ [
         <<"emeter.ca.validity = 2026-05-19 08:38:07;2032-08-06 15:24:56">>,
         <<"config.ca.validity = 2026-05-19 08:38:07;2032-08-06 15:24:56">>,
         <<"crl.validity = 0000-00-00 00:00:00;0000-00-00 00:00:00">>,
@@ -175,15 +180,9 @@ syslog_overflow(IMEI) ->
     lists:nth(1 + erlang:phash2({IMEI, ovf}) rem length(Ifaces), Ifaces).
 
 %% Shared modem identity / radio snapshot used by config and status reads.
-smp_lines(IMEI) ->
-    {Rssi, Sinr, Rsrq, Rsrp} = signal(IMEI),
-    OsVersion = iolist_to_binary(
-        io_lib:format("smp.os_version = EC200A EC200AEUHAR01A30M16 OPERATOR=21601 "
-                      "NET=21601,7 STATUS=1 IP=172.31.158.137 RSSI=~b TXPWR=0 "
-                      "CID=71937 SINR=~b ECIO=0 RSRQ=~b RSRP=~b",
-                      [Rssi, Sinr, Rsrq, Rsrp])),
+smp_lines(IMEI, IP) ->
     [<<"smp.firmware_version = 5.3.61.0">>,
-     OsVersion,
+     device_cmd:modem_os_line(IP, device_cmd:random_radio()),
      <<"smp.revision_id = WM-E1S WM-E1S 3.2.6">>,
      <<"smp.modem_sn = 142588346492215954">>,
      <<"smp.modem_imei = ", IMEI/binary, ", ICC = 8936200000550566520F">>,
@@ -208,14 +207,6 @@ rtc_utc() ->
     iolist_to_binary(
       io_lib:format("~4..0b-~2..0b-~2..0bT~2..0b:~2..0b:~2..0b+00:00",
                     [Y, Mo, D, H, Mi, S])).
-
-%% Deterministic per-device signal levels within typical LTE ranges.
-signal(IMEI) ->
-    H = erlang:phash2(IMEI),
-    {-50 - (H rem 61),            %% RSSI -50..-110
-     H rem 31,                    %% SINR 0..30
-     -3 - ((H bsr 4) rem 18),     %% RSRQ -3..-20
-     -70 - ((H bsr 8) rem 51)}.   %% RSRP -70..-120
 
 %% Engine-id tail: last 12 digits of the IMEI (as in real WM-E1S units).
 engine_tail(IMEI) ->

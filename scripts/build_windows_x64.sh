@@ -32,13 +32,14 @@ for app in "${APPS[@]}"; do
 done
 
 cp "$ROOT/config/sys.config" "$OUT/config/"
+cp "$ROOT/config/sys.scale.config" "$OUT/config/" 2>/dev/null || true
 cp "$ROOT/config/sys.tls.config" "$OUT/config/" 2>/dev/null || true
 cp "$ROOT/config/devices.csv" "$OUT/config/"
 
 WIN_SCRIPTS="$ROOT/scripts/windows"
 if [ -d "$WIN_SCRIPTS" ]; then
     for ps1 in Dmd-Common.ps1 Start-All.ps1 Start-Mgmt.ps1 Start-Agent.ps1 \
-               Add-LoopbackAliases.ps1 New-DeviceFleetCsv.ps1 Test-Prerequisites.ps1; do
+               Add-LoopbackAliases.ps1 Set-WindowsTcpTuning.ps1 New-DeviceFleetCsv.ps1 Test-Prerequisites.ps1; do
         [ -f "$WIN_SCRIPTS/$ps1" ] && cp "$WIN_SCRIPTS/$ps1" "$OUT/"
     done
     [ -f "$WIN_SCRIPTS/generate_devices.bat" ] && cp "$WIN_SCRIPTS/generate_devices.bat" "$OUT/"

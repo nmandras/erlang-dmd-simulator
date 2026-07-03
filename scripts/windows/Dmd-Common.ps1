@@ -193,6 +193,58 @@ function Get-DmdLoopbackInterfaceName {
     return 'Loopback Pseudo-Interface 1'
 }
 
+function Get-DmdDeviceCount {
+    param(
+        [Parameter(Mandatory)]
+        [string]$CsvPath
+    )
+
+    return @(Import-Csv -LiteralPath $CsvPath).Count
+}
+
+function Get-DmdScaleInflight {
+    param(
+        [Parameter(Mandatory)]
+        [int]$DeviceCount
+    )
+
+    $min = 500
+    $max = 2000
+    $computed = [int][Math]::Floor($DeviceCount / 20)
+    if ($computed -lt $min) { return $min }
+    if ($computed -gt $max) { return $max }
+    return $computed
+}
+
+function Get-DmdScaleVmArgs {
+    return @(
+        '+P', '2000000',
+        '+Q', '1048576',
+        '+SDio', '128'
+    )
+}
+
+function Get-DmdScaleEval {
+    param(
+        [Parameter(Mandatory)]
+        [int]$Inflight,
+
+        [Parameter(Mandatory)]
+        [string[]]$StartApps
+    )
+
+    $setInflight = @(
+        "application:set_env(dmd_agent, max_connect_inflight, $Inflight)"
+        "application:set_env(dmd_mgmt, max_connect_inflight, $Inflight)"
+    )
+
+    $starts = foreach ($app in $StartApps) {
+        "application:ensure_all_started($app)"
+    }
+
+    return $setInflight + $starts
+}
+
 function Start-DmdNode {
     param(
         [Parameter(Mandatory)]
@@ -205,7 +257,9 @@ function Start-DmdNode {
         [Parameter(Mandatory)]
         [string[]]$EvalStatements,
 
-        [string]$ConfigBase = 'sys'
+        [string]$ConfigBase = 'sys',
+
+        [string[]]$VmArgs = @()
     )
 
     Test-DmdPrerequisitesRuntime
@@ -221,6 +275,9 @@ function Start-DmdNode {
     Push-Location $Root
     try {
         $erlArgs = @()
+        foreach ($arg in $VmArgs) {
+            $erlArgs += $arg
+        }
         foreach ($path in $ebinPaths) {
             $erlArgs += '-pa'
             $erlArgs += $path

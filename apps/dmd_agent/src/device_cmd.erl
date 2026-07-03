@@ -10,7 +10,7 @@
 %%% stubbed but wired in.
 -module(device_cmd).
 
--export([handle/2]).
+-export([handle/2, random_radio/0, modem_os_line/2]).
 
 -type code() :: 0 | 1.
 -type action() :: none | reboot.
@@ -38,19 +38,12 @@ handle({unknown, _Raw}, _Data) ->
 %% are randomised within typical LTE ranges; RTC is the current system time and
 %% UPTIME is the simulated device's uptime in seconds.
 -spec stat_payload(map()) -> binary().
-stat_payload(#{imei := IMEI, boot_time := Bt}) ->
+stat_payload(#{imei := IMEI, ip := IP, boot_time := Bt}) ->
     Uptime = erlang:system_time(second) - Bt,
-    Rssi = -(50 + rand:uniform(60)),   %% -51 .. -110 dBm
-    Sinr = rand:uniform(30),           %%   1 .. 30  dB
-    Rsrq = -(3 + rand:uniform(17)),    %%  -4 .. -20 dB
-    Rsrp = -(70 + rand:uniform(50)),   %% -71 .. -120 dBm
+    {Rssi, Sinr, Rsrq, Rsrp} = random_radio(),
     Lines = [
         <<"STAT:smp.firmware_version = 5.3.61.0">>,
-        iolist_to_binary(
-          io_lib:format("smp.os_version = EC200A EC200AEUHAR01A30M16 OPERATOR=21601 "
-                        "NET=21601,7 STATUS=1 IP=172.31.158.137 RSSI=~b TXPWR=0 "
-                        "CID=71937 SINR=~b ECIO=0 RSRQ=~b RSRP=~b",
-                        [Rssi, Sinr, Rsrq, Rsrp])),
+        modem_os_line(IP, {Rssi, Sinr, Rsrq, Rsrp}),
         <<"smp.revision_id = WM-E1S WM-E1S 3.2.6">>,
         <<"smp.modem_sn = 142588346492215954">>,
         <<"smp.modem_imei = ", IMEI/binary, ", ICC = 8936200000550566520F">>,
@@ -67,6 +60,21 @@ stat_payload(#{imei := IMEI, boot_time := Bt}) ->
         secstat_line()
     ],
     iolist_to_binary(lists:join(<<"\n">>, Lines)).
+
+%% Typical LTE radio snapshot; values change on every STAT response.
+-spec random_radio() -> {integer(), integer(), integer(), integer()}.
+random_radio() ->
+    {-(50 + rand:uniform(60)),   %% RSSI -51 .. -110 dBm
+     rand:uniform(30),            %% SINR   1 .. 30 dB
+     -(3 + rand:uniform(17)),     %% RSRQ  -4 .. -20 dB
+     -(70 + rand:uniform(50))}.   %% RSRP -71 .. -120 dBm
+
+modem_os_line(IP, {Rssi, Sinr, Rsrq, Rsrp}) ->
+    iolist_to_binary(
+      io_lib:format("smp.os_version = EC200A EC200AEUHAR01A30M16 OPERATOR=21601 "
+                    "NET=21601,7 STATUS=1 IP=~s RSSI=~b TXPWR=0 "
+                    "CID=71937 SINR=~b ECIO=0 RSRQ=~b RSRP=~b",
+                    [dmd_proto:ip_to_bin(IP), Rssi, Sinr, Rsrq, Rsrp])).
 
 %% SECSTAT is 1 (security events pending) with the configured probability,
 %% otherwise 0. The server uses SECSTAT:1 to decide whether to fetch SECLOG.

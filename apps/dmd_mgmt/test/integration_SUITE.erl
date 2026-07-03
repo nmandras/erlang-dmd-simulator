@@ -98,12 +98,15 @@ unknown_device(_Config) ->
 wme_config_read(_Config) ->
     IMEI = <<"101000000000003">>,  %% wme device
     {ok, Blob} = dmd_mgmt:wme_read_config(IMEI, config),
-    {ok, Expected} = device_wme:config_blob(IMEI, 16#FF),
-    ?assertEqual(Expected, Blob),
     ?assert(byte_size(Blob) > 256),  %% spans multiple V1 packets
+    ?assertNotEqual(nomatch, binary:match(Blob, <<"conn.apn_name = wm2m">>)),
+    ?assertNotEqual(nomatch, binary:match(Blob, <<"smp.modem_imei = ", IMEI/binary>>)),
+    ?assertNotEqual(nomatch, binary:match(Blob, <<"IP=127.10.0.33">>)),
     {ok, Status} = dmd_mgmt:wme_read_config(IMEI, status),
     ?assertNotEqual(nomatch, binary:match(Status, <<"smp.firmware_version">>)),
     ?assertNotEqual(nomatch, binary:match(Status, <<"smp.modem_imei = ", IMEI/binary>>)),
+    ?assertNotEqual(nomatch, binary:match(Status, <<"IP=127.10.0.33">>)),
+    ?assertNotEqual(nomatch, binary:match(Status, <<"RSSI=">>)),
     ?assertNotEqual(nomatch, binary:match(Status, <<"RTC:">>)),
     ?assertNotEqual(nomatch, binary:match(Status, <<"UPTIME:">>)),
     ?assertNotEqual(nomatch, binary:match(Status, <<"SECSTAT:">>)),

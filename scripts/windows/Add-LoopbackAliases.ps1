@@ -33,7 +33,10 @@ if ($ips.Count -eq 0) {
 
 $iface = Get-DmdLoopbackInterfaceName
 Write-Host "Loopback interface: $iface"
-Write-Host "Device IPs in CSV: $($ips -join ', ')"
+Write-Host "Device IPs in CSV: $($ips.Count) unique address(es)"
+if ($ips.Count -le 20) {
+    Write-Host ($ips -join ', ')
+}
 
 $missing = Test-DmdLoopbackAliases -Ips $ips
 if ($missing.Count -eq 0) {
@@ -41,9 +44,13 @@ if ($missing.Count -eq 0) {
     return
 }
 
+$added = 0
 foreach ($ip in $missing) {
     if ($PSCmdlet.ShouldProcess($ip, "Add loopback alias on $iface")) {
-        Write-Host ">> Adding $ip ..."
+        $added++
+        if ($missing.Count -le 20 -or ($added % 100) -eq 1 -or $added -eq $missing.Count) {
+            Write-Host ">> Adding aliases... ($added / $($missing.Count))"
+        }
         & netsh interface ipv4 add address $iface $ip 255.255.255.255
         if ($LASTEXITCODE -ne 0) {
             throw "netsh failed to add $ip (exit code $LASTEXITCODE)"

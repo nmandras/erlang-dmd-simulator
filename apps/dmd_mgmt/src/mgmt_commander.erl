@@ -73,6 +73,9 @@ do_send(IMEI, Cmd) ->
     end.
 
 connect_and_send(IP, Port, Cmd) ->
+    dmd_conn_limit:with(dmd_mgmt, fun() -> connect_and_send1(IP, Port, Cmd) end).
+
+connect_and_send1(IP, Port, Cmd) ->
     case dmd_transport:connect(IP, Port, [], dmd_config:connect_tls(dmd_mgmt)) of
         {ok, Sock} ->
             Result = exchange(Sock, Cmd),
